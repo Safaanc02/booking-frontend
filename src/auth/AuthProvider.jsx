@@ -2,6 +2,21 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import keycloak from "../keycloak"
 import { AuthContext } from "./AuthContext"
 
+/**
+ * Écarte tout ce qui n'est pas un objet d'options.
+ *
+ * `onClick={login}` passe l'événement React en argument, dont les propriétés
+ * se retrouvaient étalées dans les options Keycloak — l'URL d'autorisation
+ * partait mal formée et la redirection échouait sans le moindre message.
+ * Corriger ici plutôt qu'à chaque appel : le prochain `onClick={login}` sera
+ * écrit tôt ou tard.
+ */
+const optionsSures = (options) => {
+  if (!options || typeof options !== "object") return {}
+  if ("nativeEvent" in options || "currentTarget" in options) return {}
+  return options
+}
+
 /** Marge de rafraîchissement : on renouvelle si le token expire dans moins de 60 s. */
 const MARGE_SECONDES = 60
 /** Vérification périodique. L'ancien code appelait updateToken toutes les 6 s — inutilement agressif. */
@@ -66,7 +81,7 @@ export default function AuthProvider({ children }) {
           }
         : null,
       hasRole: (role) => roles.includes(role),
-      login: (options) => keycloak.login({ redirectUri: window.location.href, ...options }),
+      login: (options) => keycloak.login({ redirectUri: window.location.href, ...optionsSures(options) }),
       register: () => keycloak.register({ redirectUri: window.location.href }),
       logout: () => keycloak.logout({ redirectUri: window.location.origin }),
     }

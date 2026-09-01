@@ -54,11 +54,30 @@ export const prestationsApi = {
 }
 
 export const proApi = {
+  /* Agenda */
+  agenda: (salonId, { date, jours = 1 } = {}) =>
+    client.get(`/api/pro/salons/${salonId}/agenda`, { params: { date, jours } }).then((r) => r.data),
+  /** Rendez-vous pris par téléphone ou au comptoir, pour un client sans compte. */
+  creerReservation: (salonId, payload) =>
+    client.post(`/api/pro/salons/${salonId}/reservations`, payload).then((r) => r.data),
+  changerStatut: (reservationId, statut) =>
+    client.patch(`/api/pro/reservations/${reservationId}/statut`, null, { params: { statut } }).then((r) => r.data),
+
+  /* Équipe */
   employes: (salonId) => client.get(`/api/pro/salons/${salonId}/employes`).then((r) => r.data),
-  creerEmploye: (salonId, payload) => client.post(`/api/pro/salons/${salonId}/employes`, payload).then((r) => r.data),
+  creerEmploye: (salonId, payload) =>
+    client.post(`/api/pro/salons/${salonId}/employes`, payload).then((r) => r.data),
+  modifierEmploye: (employeId, payload) =>
+    client.put(`/api/pro/employes/${employeId}`, payload).then((r) => r.data),
+  desactiverEmploye: (employeId) => client.delete(`/api/pro/employes/${employeId}`),
   affecterPrestations: (employeId, prestationIds) =>
     client.put(`/api/pro/employes/${employeId}/prestations`, { prestationIds }),
+
+  /* Horaires */
   horaires: (salonId) => client.get(`/api/pro/salons/${salonId}/horaires`).then((r) => r.data),
   definirHoraires: (salonId, semaine) =>
     client.put(`/api/pro/salons/${salonId}/horaires`, semaine).then((r) => r.data),
+
+  /* Absences */
+  creerAbsence: (payload) => client.post("/api/pro/absences", payload).then((r) => r.data),
 }
