@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom"
 import { publicApi } from "../api/bookingApi"
 import { prix, duree, telephone } from "../lib/format"
 import Loader, { EmptyState, ErrorState } from "../components/Loader"
+import ListeAvis from "../components/ListeAvis"
+import { NoteResume } from "../components/Etoiles"
 
 export default function SalonDetails() {
   const { id } = useParams()
@@ -44,6 +46,7 @@ export default function SalonDetails() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-stone-900">{salon.nom}</h1>
+            <NoteResume moyenne={salon.noteMoyenne} nombre={salon.nombreAvis} classe="mt-1" />
             <p className="mt-1 text-stone-600">
               {salon.adresse}
               {salon.quartier && <span className="text-stone-400"> · {salon.quartier}</span>}
@@ -126,6 +129,13 @@ export default function SalonDetails() {
             </div>
           ))
         )}
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-stone-900">Avis clients</h2>
+        <div className="mt-4">
+          <ListeAvis salonId={salon.id} />
+        </div>
       </section>
     </div>
   )

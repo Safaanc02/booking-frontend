@@ -34,6 +34,15 @@ export const publicApi = {
       .then((r) => r.data),
 
   villes: () => client.get("/api/public/villes").then((r) => r.data),
+
+  avis: (salonId, { page = 0, size = 10 } = {}) =>
+    client.get(`/api/public/salons/${salonId}/avis`, { params: { page, size } }).then((r) => r.data),
+}
+
+export const avisApi = {
+  deposer: (payload) => client.post("/api/avis", payload).then((r) => r.data),
+  repondre: (avisId, reponse) =>
+    client.post(`/api/pro/avis/${avisId}/reponse`, { reponse }).then((r) => r.data),
 }
 
 export const reservationsApi = {
@@ -88,4 +97,8 @@ export const adminApi = {
     client.get("/api/admin/salons", { params: { statut, page, size: 50 } }).then((r) => r.data),
   changerStatut: (salonId, statut) =>
     client.patch(`/api/admin/salons/${salonId}/statut`, null, { params: { statut } }).then((r) => r.data),
+  avis: (statut = "PUBLIE", page = 0) =>
+    client.get("/api/admin/avis", { params: { statut, page, size: 50 } }).then((r) => r.data),
+  modererAvis: (avisId, statut) =>
+    client.patch(`/api/admin/avis/${avisId}/statut`, null, { params: { statut } }).then((r) => r.data),
 }

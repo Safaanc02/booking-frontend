@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
 import { telephone } from "../lib/format"
+import { NoteResume } from "./Etoiles"
 
 export default function SalonCard({ salon }) {
   return (
@@ -20,9 +21,12 @@ export default function SalonCard({ salon }) {
           </span>
         )}
       </div>
-      {salon.telephone && (
-        <p className="mt-3 text-sm text-stone-400">{telephone(salon.telephone)}</p>
-      )}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <NoteResume moyenne={salon.noteMoyenne} nombre={salon.nombreAvis} />
+        {salon.telephone && (
+          <span className="text-sm text-stone-400">{telephone(salon.telephone)}</span>
+        )}
+      </div>
     </Link>
   )
 }

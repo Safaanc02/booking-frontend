@@ -6,12 +6,14 @@ import OngletAgenda from "./OngletAgenda"
 import OngletPrestations from "./OngletPrestations"
 import OngletEquipe from "./OngletEquipe"
 import OngletHoraires from "./OngletHoraires"
+import OngletAvis from "./OngletAvis"
 
 const ONGLETS = [
   ["agenda", "Agenda"],
   ["prestations", "Prestations"],
   ["equipe", "Équipe"],
   ["horaires", "Horaires"],
+  ["avis", "Avis"],
 ]
 
 export default function ProSalon() {
@@ -79,6 +81,7 @@ export default function ProSalon() {
         {onglet === "prestations" && <OngletPrestations salon={salon} onChange={charger} />}
         {onglet === "equipe" && <OngletEquipe salon={salon} />}
         {onglet === "horaires" && <OngletHoraires salon={salon} />}
+        {onglet === "avis" && <OngletAvis salon={salon} />}
       </div>
     </div>
   )

@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { reservationsApi } from "../api/bookingApi"
+import { reservationsApi, avisApi } from "../api/bookingApi"
 import { useAuth } from "../auth/useAuth"
 import { prix, instantLong } from "../lib/format"
 import Loader, { EmptyState, ErrorState } from "../components/Loader"
+import Etoiles from "../components/Etoiles"
 
 const BADGES = {
   EN_ATTENTE:     ["En attente", "bg-amber-50 text-amber-700 ring-amber-200"],
@@ -92,14 +93,14 @@ export default function Account() {
           <Section titre="À venir" liste={aVenir} onAnnuler={annuler} enCours={action.id} annulable />
         )}
         {etat.statut === "ok" && passees.length > 0 && (
-          <Section titre="Historique" liste={passees} />
+          <Section titre="Historique" liste={passees} onAvis={charger} />
         )}
       </div>
     </div>
   )
 }
 
-function Section({ titre, liste, onAnnuler, enCours, annulable = false }) {
+function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis }) {
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-400">{titre}</h2>
@@ -132,10 +133,77 @@ function Section({ titre, liste, onAnnuler, enCours, annulable = false }) {
                   </button>
                 )}
               </div>
+              {/* Le dépôt d'un avis n'est proposé qu'après un rendez-vous
+                  effectivement honoré, et une seule fois. */}
+              {r.statut === "HONOREE" && (
+                <div className="w-full">
+                  {r.avisDepose
+                    ? <p className="text-xs text-stone-400">Merci, votre avis a bien été enregistré.</p>
+                    : <FormulaireAvis reservationId={r.id} onDepose={onAvis} />}
+                </div>
+              )}
             </li>
           )
         })}
       </ul>
     </section>
+  )
+}
+
+/** Dépôt d'un avis, replié tant que le client ne l'a pas demandé. */
+function FormulaireAvis({ reservationId, onDepose }) {
+  const [ouvert, setOuvert] = useState(false)
+  const [note, setNote] = useState(0)
+  const [commentaire, setCommentaire] = useState("")
+  const [envoi, setEnvoi] = useState({ enCours: false, erreur: null })
+
+  if (!ouvert) {
+    return (
+      <button
+        onClick={() => setOuvert(true)}
+        className="rounded-lg border border-brand-300 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
+      >
+        Donner mon avis
+      </button>
+    )
+  }
+
+  const soumettre = (e) => {
+    e.preventDefault()
+    setEnvoi({ enCours: true, erreur: null })
+    avisApi
+      .deposer({ reservationId, note, commentaire: commentaire.trim() || null })
+      .then(() => { setOuvert(false); onDepose?.() })
+      .catch((erreur) => setEnvoi({ enCours: false, erreur }))
+  }
+
+  return (
+    <form onSubmit={soumettre} className="mt-3 rounded-xl bg-stone-50 p-4 ring-1 ring-stone-200">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-stone-600">Votre note</span>
+        <Etoiles note={note} taille="md" onChange={setNote} name={`note-${reservationId}`} />
+      </div>
+      <textarea
+        value={commentaire}
+        onChange={(e) => setCommentaire(e.target.value)}
+        maxLength={1000}
+        rows={2}
+        placeholder="Ce qui vous a plu, ou moins plu…"
+        className="mt-3 w-full rounded-xl border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+      />
+      {envoi.erreur && <p className="mt-2 text-xs text-red-700">{envoi.erreur.message}</p>}
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={envoi.enCours || note === 0}
+          className="rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:bg-stone-300"
+        >
+          {envoi.enCours ? "Envoi…" : "Publier"}
+        </button>
+        <button type="button" onClick={() => setOuvert(false)} className="text-xs text-stone-500 hover:text-stone-800">
+          Annuler
+        </button>
+      </div>
+    </form>
   )
 }
