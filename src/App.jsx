@@ -1,34 +1,37 @@
-import React, { useContext, useState } from "react";
-import { AuthContext } from "./AuthContext";
-import axios from "axios";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom"
+import AuthProvider from "./auth/AuthProvider"
+import Header from "./components/Header"
+import Home from "./pages/Home"
+import Results from "./pages/Results"
+import SalonDetails from "./pages/SalonDetails"
+import Account from "./pages/Account"
+import Legal from "./pages/Legal"
+import NotFound from "./pages/NotFound"
 
-function App() {
-  const { authenticated, token } = useContext(AuthContext);
-  const [message, setMessage] = useState("");
-
-  const callApi = async (url) => {
-    try {
-      const res = await axios.get(`http://localhost:8080${url}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setMessage(res.data);
-    } catch (err) {
-      setMessage("❌ Erreur: " + err.response?.status);
-    }
-  };
-
-  if (!authenticated) return <h2>🔐 Connexion en cours...</h2>;
-
+export default function App() {
   return (
-    <div>
-      <h1>Booking Frontend ✅</h1>
-     <button onClick={() => callApi("/api/public/hello")}>Public</button>
-     <button onClick={() => callApi("/api/user/hello")}>User</button>
-     <button onClick={() => callApi("/api/admin/hello")}>Admin</button>
-
-      <p>Réponse backend: {message}</p>
-    </div>
-  );
+    <AuthProvider>
+      <BrowserRouter>
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <main className="flex-1">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/recherche" element={<Results />} />
+              <Route path="/salon/:id" element={<SalonDetails />} />
+              <Route path="/compte" element={<Account />} />
+              <Route path="/mentions-legales" element={<Legal />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
+          <footer className="border-t border-stone-200 bg-white">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-stone-500">
+              <span>© {new Date().getFullYear()} Booking.ma</span>
+              <Link to="/mentions-legales" className="hover:text-stone-800">Mentions légales</Link>
+            </div>
+          </footer>
+        </div>
+      </BrowserRouter>
+    </AuthProvider>
+  )
 }
-
-export default App;

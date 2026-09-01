@@ -1,0 +1,10 @@
+<!doctype html>
+<html>
+  <body>
+    <script>
+      // Keycloak recharge cette page dans une iframe cachée pour vérifier la
+      // session sans redirection visible. Elle ne doit rien faire d'autre.
+      parent.postMessage(location.href, location.origin)
+    </script>
+  </body>
+</html>

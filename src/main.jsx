@@ -1,24 +1,18 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.jsx'
-import Keycloak from 'keycloak-js'
+import React from "react"
+import ReactDOM from "react-dom/client"
+import App from "./App.jsx"
+import "./index.css"
 
-const keycloak = new Keycloak({
-  url: "http://localhost:8081/",
-  realm: "booking-realm",
-  clientId: "booking-app"
-})
-
-keycloak.init({ onLoad: 'login-required' }).then(authenticated => {
-  if (authenticated) {
-    console.log("✅ Authenticated", keycloak.token)
-    ReactDOM.createRoot(document.getElementById('root')).render(
-      <React.StrictMode>
-        <App keycloak={keycloak} />
-      </React.StrictMode>,
-    )
-  } else {
-    console.warn("❌ Auth failed")
-    keycloak.login()
-  }
-})
+/**
+ * L'initialisation de Keycloak vit dans AuthProvider, pas ici.
+ *
+ * L'ancien main.jsx créait sa propre instance Keycloak, l'initialisait en
+ * "login-required" et ne rendait <App/> qu'une fois authentifié — sans jamais
+ * monter AuthProvider. App.jsx lisait pourtant AuthContext : le destructuring
+ * d'un contexte undefined plantait l'application au démarrage.
+ */
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
