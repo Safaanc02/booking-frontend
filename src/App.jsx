@@ -4,6 +4,7 @@ import Header from "./components/Header"
 import Home from "./pages/Home"
 import Results from "./pages/Results"
 import SalonDetails from "./pages/SalonDetails"
+import Reservation from "./pages/Reservation"
 import Account from "./pages/Account"
 import Legal from "./pages/Legal"
 import NotFound from "./pages/NotFound"
@@ -19,6 +20,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/recherche" element={<Results />} />
               <Route path="/salon/:id" element={<SalonDetails />} />
+              <Route path="/salon/:id/reserver" element={<Reservation />} />
               <Route path="/compte" element={<Account />} />
               <Route path="/mentions-legales" element={<Legal />} />
               <Route path="*" element={<NotFound />} />

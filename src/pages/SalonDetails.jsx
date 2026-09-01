@@ -1,13 +1,11 @@
 import { useEffect, useState, useCallback } from "react"
-import { useParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 import { publicApi } from "../api/bookingApi"
 import { prix, duree, telephone } from "../lib/format"
 import Loader, { EmptyState, ErrorState } from "../components/Loader"
-import { useAuth } from "../auth/useAuth"
 
 export default function SalonDetails() {
   const { id } = useParams()
-  const { authenticated, login } = useAuth()
   const [etat, setEtat] = useState({ statut: "chargement", data: null, erreur: null })
 
   const charger = useCallback(() => {
@@ -21,14 +19,24 @@ export default function SalonDetails() {
   useEffect(charger, [charger])
 
   if (etat.statut === "chargement") return <Loader label="Chargement du salon…" />
-  if (etat.statut === "erreur") return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <ErrorState erreur={etat.erreur} onRetry={charger} />
-    </div>
-  )
+  if (etat.statut === "erreur") {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10">
+        <ErrorState erreur={etat.erreur} onRetry={charger} />
+      </div>
+    )
+  }
 
   const salon = etat.data
   const prestations = salon.prestations ?? []
+  const employes = salon.employes ?? []
+
+  // Regroupement par catégorie, comme sur la fiche d'un vrai salon.
+  const groupes = prestations.reduce((acc, p) => {
+    const cle = p.categorie || "Prestations"
+    ;(acc[cle] ??= []).push(p)
+    return acc
+  }, {})
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -36,7 +44,10 @@ export default function SalonDetails() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-stone-900">{salon.nom}</h1>
-            <p className="mt-1 text-stone-600">{salon.adresse}</p>
+            <p className="mt-1 text-stone-600">
+              {salon.adresse}
+              {salon.quartier && <span className="text-stone-400"> · {salon.quartier}</span>}
+            </p>
           </div>
           {salon.ville && (
             <span className="rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">
@@ -44,17 +55,38 @@ export default function SalonDetails() {
             </span>
           )}
         </div>
+
+        {salon.description && <p className="mt-4 text-sm text-stone-600">{salon.description}</p>}
+
         <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm text-stone-600">
           {salon.telephone && (
-            <div><dt className="inline text-stone-400">Téléphone · </dt>
-              <dd className="inline">{telephone(salon.telephone)}</dd></div>
+            <div>
+              <dt className="inline text-stone-400">Téléphone · </dt>
+              <dd className="inline">{telephone(salon.telephone)}</dd>
+            </div>
           )}
           {salon.email && (
-            <div><dt className="inline text-stone-400">Email · </dt>
-              <dd className="inline">{salon.email}</dd></div>
+            <div>
+              <dt className="inline text-stone-400">Email · </dt>
+              <dd className="inline">{salon.email}</dd>
+            </div>
           )}
         </dl>
       </header>
+
+      {employes.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold text-stone-900">L'équipe</h2>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {employes.map((e) => (
+              <div key={e.id} className="rounded-xl bg-white px-4 py-3 ring-1 ring-stone-200">
+                <p className="font-medium text-stone-900">{e.prenom} {e.nom}</p>
+                {e.titre && <p className="text-sm text-stone-500">{e.titre}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold text-stone-900">Prestations</h2>
@@ -66,38 +98,34 @@ export default function SalonDetails() {
             </EmptyState>
           </div>
         ) : (
-          <ul className="mt-4 divide-y divide-stone-200 overflow-hidden rounded-2xl bg-white ring-1 ring-stone-200">
-            {prestations.map((p) => (
-              <li key={p.id} className="flex flex-wrap items-center justify-between gap-4 p-5">
-                <div className="min-w-0">
-                  <p className="font-medium text-stone-900">{p.nom}</p>
-                  {p.description && <p className="mt-0.5 text-sm text-stone-500">{p.description}</p>}
-                  <p className="mt-1 text-sm text-stone-400">{duree(p.dureeMinutes)}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-semibold text-stone-900">{prix(p.prix)}</span>
-                  <button
-                    onClick={() => (authenticated ? null : login())}
-                    disabled={authenticated}
-                    title={authenticated
-                      ? "Le choix du créneau arrive au prochain jalon"
-                      : "Connectez-vous pour réserver"}
-                    className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-stone-300"
-                  >
-                    Réserver
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          Object.entries(groupes).map(([categorie, liste]) => (
+            <div key={categorie} className="mt-5">
+              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-stone-400">
+                {categorie}
+              </h3>
+              <ul className="divide-y divide-stone-200 overflow-hidden rounded-2xl bg-white ring-1 ring-stone-200">
+                {liste.map((p) => (
+                  <li key={p.id} className="flex flex-wrap items-center justify-between gap-4 p-5">
+                    <div className="min-w-0">
+                      <p className="font-medium text-stone-900">{p.nom}</p>
+                      {p.description && <p className="mt-0.5 text-sm text-stone-500">{p.description}</p>}
+                      <p className="mt-1 text-sm text-stone-400">{duree(p.dureeMinutes)}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="font-semibold text-stone-900">{prix(p.prix)}</span>
+                      <Link
+                        to={`/salon/${salon.id}/reserver?prestationId=${p.id}`}
+                        className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+                      >
+                        Réserver
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
         )}
-
-        {/* Le moteur de disponibilité (jalon J1) n'existe pas encore : on l'annonce
-            plutôt que de laisser un bouton qui ne mène nulle part. */}
-        <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-200">
-          Le choix du créneau n'est pas encore disponible — il arrive avec le moteur de
-          disponibilité. Pour l'instant, contactez le salon au {telephone(salon.telephone)}.
-        </p>
       </section>
     </div>
   )
