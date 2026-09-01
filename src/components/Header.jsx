@@ -18,6 +18,7 @@ export default function Header() {
           <NavLink to="/recherche" className={lien}>Salons</NavLink>
           {authenticated && <NavLink to="/compte" className={lien}>Mes réservations</NavLink>}
           {hasRole("pro") && <NavLink to="/pro" className={lien}>Mon salon</NavLink>}
+          {hasRole("admin") && <NavLink to="/admin" className={lien}>Administration</NavLink>}
 
           {authenticated ? (
             <div className="flex items-center gap-3">

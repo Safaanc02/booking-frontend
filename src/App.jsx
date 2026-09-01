@@ -8,6 +8,7 @@ import Reservation from "./pages/Reservation"
 import RequireRole from "./components/RequireRole"
 import ProDashboard from "./pages/pro/ProDashboard"
 import ProSalon from "./pages/pro/ProSalon"
+import AdminSalons from "./pages/admin/AdminSalons"
 import Account from "./pages/Account"
 import Legal from "./pages/Legal"
 import NotFound from "./pages/NotFound"
@@ -27,6 +28,7 @@ export default function App() {
               <Route path="/compte" element={<Account />} />
               <Route path="/pro" element={<RequireRole role="pro"><ProDashboard /></RequireRole>} />
               <Route path="/pro/salon/:id" element={<RequireRole role="pro"><ProSalon /></RequireRole>} />
+              <Route path="/admin" element={<RequireRole role="admin"><AdminSalons /></RequireRole>} />
               <Route path="/mentions-legales" element={<Legal />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

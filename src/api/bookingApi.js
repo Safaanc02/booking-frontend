@@ -81,3 +81,11 @@ export const proApi = {
   /* Absences */
   creerAbsence: (payload) => client.post("/api/pro/absences", payload).then((r) => r.data),
 }
+
+export const adminApi = {
+  /** File de validation. `statut` : EN_ATTENTE, ACTIF ou SUSPENDU. */
+  salons: (statut = "EN_ATTENTE", page = 0) =>
+    client.get("/api/admin/salons", { params: { statut, page, size: 50 } }).then((r) => r.data),
+  changerStatut: (salonId, statut) =>
+    client.patch(`/api/admin/salons/${salonId}/statut`, null, { params: { statut } }).then((r) => r.data),
+}
