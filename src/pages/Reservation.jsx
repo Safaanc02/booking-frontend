@@ -9,6 +9,60 @@ import { prix, duree, instantLong } from "../lib/format"
 
 const ETAPES = ["Prestation", "Praticien", "Créneau", "Confirmation"]
 
+/**
+ * Sauvegarde du choix en cours avant la redirection vers Keycloak.
+ *
+ * La connexion quitte l'application : au retour, React est remonté à zéro et
+ * tout le tunnel serait perdu. Faire refaire quatre écrans à quelqu'un qui
+ * vient de saisir son mot de passe est le meilleur moyen de le perdre là.
+ *
+ * sessionStorage plutôt que localStorage : la reprise n'a de sens que dans
+ * l'onglet en cours, et rien ne doit survivre à sa fermeture.
+ */
+const cle = (salonId) => `reservation:${salonId}`
+
+/** Au-delà, la reprise n'a plus de sens : le créneau a probablement été pris. */
+const PEREMPTION_MS = 15 * 60 * 1000
+
+const memoriser = (salonId, choix) => {
+  try {
+    sessionStorage.setItem(cle(salonId), JSON.stringify({ ...choix, ts: Date.now() }))
+  } catch {
+    // Navigation privée ou stockage bloqué : on perd la reprise, pas la réservation.
+  }
+}
+
+/**
+ * Lit sans consommer.
+ *
+ * Une première version supprimait l'entrée à la lecture. En développement,
+ * StrictMode monte le composant deux fois : le premier montage consommait la
+ * reprise avant d'être jeté, et le second ne trouvait plus rien. La péremption
+ * remplace la suppression immédiate.
+ */
+const reprendre = (salonId) => {
+  try {
+    const brut = sessionStorage.getItem(cle(salonId))
+    if (!brut) return null
+    const choix = JSON.parse(brut)
+    if (!choix.ts || Date.now() - choix.ts > PEREMPTION_MS) {
+      sessionStorage.removeItem(cle(salonId))
+      return null
+    }
+    return choix
+  } catch {
+    return null
+  }
+}
+
+const oublier = (salonId) => {
+  try {
+    sessionStorage.removeItem(cle(salonId))
+  } catch {
+    /* rien à faire */
+  }
+}
+
 export default function Reservation() {
   const { id: salonId } = useParams()
   const [params] = useSearchParams()
@@ -31,9 +85,25 @@ export default function Reservation() {
       .ficheSalon(salonId)
       .then((data) => {
         setSalon({ statut: "ok", data, erreur: null })
+
+        // Retour de Keycloak : on restaure le choix et on repose le visiteur
+        // directement sur le récapitulatif.
+        const repris = reprendre(salonId)
+        if (repris) {
+          const p = data.prestations?.find((x) => x.id === repris.prestationId)
+          if (p) {
+            setPrestation(p)
+            setEmployeId(repris.employeId ?? null)
+            setCreneau(repris.creneau)
+            setNote(repris.note ?? "")
+            setEtape(3)
+            return
+          }
+        }
+
         // Prestation pré-sélectionnée depuis la fiche salon : on saute l'étape 1.
         const pid = Number(params.get("prestationId"))
-        const trouvee = data.prestations?.find((p) => p.id === pid)
+        const trouvee = data.prestations?.find((x) => x.id === pid)
         if (trouvee) {
           setPrestation(trouvee)
           setEtape(1)
@@ -55,6 +125,7 @@ export default function Reservation() {
   /* ---------- Navigation ---------- */
 
   const choisirPrestation = (p) => {
+    oublier(salonId)
     setPrestation(p)
     setEmployeId(null)
     setCreneau(null)
@@ -62,6 +133,7 @@ export default function Reservation() {
   }
 
   const choisirPraticien = (eid) => {
+    oublier(salonId)
     setEmployeId(eid)
     setCreneau(null)
     setEtape(2)
@@ -75,6 +147,13 @@ export default function Reservation() {
   const confirmer = useCallback(() => {
     if (!authenticated) {
       // On ne demande le compte qu'ici : c'est l'étape où l'abandon coûte le moins.
+      // Le choix est mis de côté pour être retrouvé au retour de Keycloak.
+      memoriser(salonId, {
+        prestationId: prestation.id,
+        employeId,
+        creneau,
+        note,
+      })
       login()
       return
     }
@@ -89,7 +168,10 @@ export default function Reservation() {
         debut: creneau.debut,
         noteClient: note.trim() || null,
       })
-      .then(() => navigate("/compte?reservation=ok"))
+      .then(() => {
+        oublier(salonId)
+        navigate("/compte?reservation=ok")
+      })
       .catch((erreur) => {
         setEnvoi({ enCours: false, erreur })
         // Créneau pris entre-temps : on renvoie au choix de l'horaire.
