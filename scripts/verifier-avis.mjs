@@ -26,7 +26,8 @@ const COMMENTAIRE = `Très bon accueil, essai ${Date.now().toString().slice(-5)}
  * ------------------------------------------------------------------ */
 const API = process.env.API_URL ?? 'http://localhost:8080'
 const KC = process.env.KC_URL ?? 'http://localhost:8081'
-const SALON = Number(process.env.SALON_ID ?? 1)
+/** Salon de repli, utilisé seulement s'il faut créer une réservation de zéro. */
+const SALON_REPLI = Number(process.env.SALON_ID ?? 1)
 
 const jeton = async (identifiant) => {
   const r = await fetch(`${KC}/realms/booking-realm/protocol/openid-connect/token`, {
@@ -67,6 +68,7 @@ const preparerRendezVousHonore = async () => {
 
   if (!cible) {
     // Aucune réservation exploitable : on en crée une sur le premier créneau libre.
+    const SALON = SALON_REPLI
     const fiche = await (await fetch(`${API}/api/public/salons/${SALON}`)).json()
     const prestation = fiche.prestations?.[0]
     if (!prestation) throw new Error(`le salon ${SALON} n'a aucune prestation`)
@@ -88,12 +90,20 @@ const preparerRendezVousHonore = async () => {
     cible = creee
   }
 
-  return cible.id
+  /**
+   * On renvoie aussi le salon concerné.
+   *
+   * Une version précédente vérifiait toujours la fiche du salon 1, quelle que
+   * soit la réservation retenue : sur un jeu de données où celle-ci appartient
+   * à un autre salon, le test cherchait le commentaire sur la mauvaise page.
+   */
+  return { id: cible.id, salonId: cible.salonId, salonNom: cible.salonNom }
 }
 
-const rendezVous = await preparerRendezVousHonore()
+const rdv = await preparerRendezVousHonore()
+const SALON = rdv.salonId
 console.log(`─── Préparation ────────────────────────────────────`)
-console.log(`   rendez-vous #${rendezVous} honoré et sans avis`)
+console.log(`   rendez-vous #${rdv.id} chez ${rdv.salonNom} (salon #${SALON}), honoré et sans avis`)
 console.log()
 
 const browser = await puppeteer.launch({
@@ -207,7 +217,7 @@ console.log(' ', ok(await attendre('votre avis a bien été enregistré')),
   'avis enregistré, le formulaire ne réapparaît plus')
 
 console.log('\n─── L\'avis apparaît côté public ────────────────────')
-await page.goto(`${BASE}/salon/1`, { waitUntil: 'networkidle0' })
+await page.goto(`${BASE}/salon/${SALON}`, { waitUntil: 'networkidle0' })
 console.log(' ', ok(await attendre('Avis clients')), 'section présente sur la fiche')
 console.log(' ', ok(await attendre(COMMENTAIRE)), 'le commentaire est visible')
 const note = await page.evaluate(() => {
@@ -216,7 +226,8 @@ const note = await page.evaluate(() => {
 })
 console.log(' ', ok(note !== null), note ? `note affichée : ${note.moyenne} sur ${note.nombre} avis` : 'note absente ❌')
 
-await page.goto(`${BASE}/recherche?ville=Marrakech`, { waitUntil: 'networkidle0' })
+// On cherche par le nom du salon : sa ville dépend du jeu de données.
+await page.goto(`${BASE}/recherche?q=${encodeURIComponent(rdv.salonNom)}`, { waitUntil: 'networkidle0' })
 await attendre('salon')
 const noteListe = await page.evaluate(() => /★\s*[\d,]+\s*·\s*\d+ avis/.test(document.body.innerText))
 console.log(' ', ok(noteListe), 'note visible dès la liste de résultats')
@@ -236,7 +247,7 @@ await attendreSur(pagePro, 'Espace professionnel')
 await connecterSur(pagePro, 'pro1', 'pro1')
 console.log(' ', ok(await attendreSur(pagePro, 'Mes salons')), 'tableau de bord professionnel')
 
-await clicSur(pagePro, 'Dar Zine')
+await clicSur(pagePro, rdv.salonNom)
 await attendreSur(pagePro, 'Agenda')
 await clicSur(pagePro, 'Avis')
 console.log(' ', ok(await attendreSur(pagePro, 'Avis clients')), 'onglet Avis accessible')
@@ -254,7 +265,7 @@ console.log(' ', ok(saisie), 'zone de réponse disponible')
 await clicSur(pagePro, 'Publier ma réponse')
 console.log(' ', ok(await attendreSur(pagePro, 'Votre réponse')), 'réponse enregistrée')
 
-await page.goto(`${BASE}/salon/1`, { waitUntil: 'networkidle0' })
+await page.goto(`${BASE}/salon/${SALON}`, { waitUntil: 'networkidle0' })
 console.log(' ', ok(await attendre('Réponse du salon')), 'la réponse est publique')
 console.log(' ', ok(await attendre(REPONSE)), 'son texte est bien celui saisi')
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/avis.png', fullPage: true })
