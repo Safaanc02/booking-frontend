@@ -25,7 +25,16 @@ const INTERVALLE_MS = 30_000
 export default function AuthProvider({ children }) {
   const [ready, setReady] = useState(false)
   const [authenticated, setAuthenticated] = useState(false)
-  const [tick, setTick] = useState(0)
+  /**
+   * Contenu du jeton, tenu en état plutôt que relu depuis keycloak.tokenParsed.
+   *
+   * Une version précédente gardait un simple compteur en dépendance du useMemo
+   * pour forcer le recalcul après un rafraîchissement. Le compteur n'était pas
+   * lu dans le corps du memo — ESLint le signalait à juste titre, et l'astuce
+   * dépendait d'un objet mutable que React ne voit pas. La dépendance est
+   * maintenant la donnée elle-même.
+   */
+  const [profil, setProfil] = useState(null)
   // React 19 en StrictMode monte deux fois : sans ce garde, keycloak.init()
   // serait appelé deux fois et lèverait "A 'Keycloak' instance can only be initialized once".
   const initialise = useRef(false)
@@ -46,6 +55,7 @@ export default function AuthProvider({ children }) {
       })
       .then((auth) => {
         setAuthenticated(auth)
+        setProfil(auth ? keycloak.tokenParsed : null)
         setReady(true)
       })
       .catch((err) => {
@@ -60,24 +70,27 @@ export default function AuthProvider({ children }) {
     const id = setInterval(() => {
       keycloak
         .updateToken(MARGE_SECONDES)
-        .then((refreshed) => { if (refreshed) setTick((t) => t + 1) })
-        .catch(() => setAuthenticated(false))
+        .then((refreshed) => { if (refreshed) setProfil(keycloak.tokenParsed) })
+        .catch(() => {
+          setAuthenticated(false)
+          setProfil(null)
+        })
     }, INTERVALLE_MS)
     return () => clearInterval(id)
   }, [authenticated])
 
   const value = useMemo(() => {
-    const roles = keycloak.tokenParsed?.realm_access?.roles ?? []
+    const roles = profil?.realm_access?.roles ?? []
     return {
       ready,
       authenticated,
       roles,
-      user: authenticated
+      user: authenticated && profil
         ? {
-            id: keycloak.tokenParsed?.sub,
-            username: keycloak.tokenParsed?.preferred_username,
-            email: keycloak.tokenParsed?.email,
-            nom: keycloak.tokenParsed?.name,
+            id: profil.sub,
+            username: profil.preferred_username,
+            email: profil.email,
+            nom: profil.name,
           }
         : null,
       hasRole: (role) => roles.includes(role),
@@ -85,8 +98,7 @@ export default function AuthProvider({ children }) {
       register: () => keycloak.register({ redirectUri: window.location.href }),
       logout: () => keycloak.logout({ redirectUri: window.location.origin }),
     }
-    // `tick` force le recalcul après un rafraîchissement de token.
-  }, [ready, authenticated, tick])
+  }, [ready, authenticated, profil])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

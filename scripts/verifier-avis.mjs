@@ -106,9 +106,30 @@ await page.setViewport({ width: 1280, height: 1000 })
 // navigateur servirait la version d'avant et ferait échouer une assertion
 // pourtant correcte.
 await page.setCacheEnabled(false)
+/**
+ * Deux catégories distinctes, et une seule fait échouer le test.
+ *
+ * `pageerror` signale une exception JavaScript : c'est un défaut. Les messages
+ * console de type error incluent aussi les réponses HTTP 4xx/5xx journalisées
+ * par le navigateur — or un 409 « créneau déjà réservé » est une réponse
+ * applicative correcte, que l'interface est faite pour gérer. Les confondre
+ * rendait le test rouge alors que tout fonctionnait.
+ */
 const erreurs = []
-page.on('pageerror', (e) => erreurs.push(String(e)))
-page.on('console', (m) => { if (m.type() === 'error') erreurs.push(m.text()) })
+const reseau = []
+const brancher = (p) => {
+  p.on('pageerror', (e) => erreurs.push(String(e)))
+  p.on('console', (m) => {
+    if (m.type() !== 'error') return
+    const t = m.text()
+    if (/Failed to load resource|net::ERR_/.test(t)) {
+      const url = m.location()?.url ?? ''
+      reseau.push(`${t} — ${url.replace('http://localhost:8080', '')}`)
+    }
+    else erreurs.push(t)
+  })
+}
+brancher(page)
 
 const txtDe = (p) => p.evaluate(() => document.body.innerText)
 const txt = () => txtDe(page)
@@ -208,8 +229,7 @@ const contextePro = await browser.createBrowserContext()
 const pagePro = await contextePro.newPage()
 await pagePro.setViewport({ width: 1280, height: 1000 })
 await pagePro.setCacheEnabled(false)
-pagePro.on('pageerror', (e) => erreurs.push(String(e)))
-pagePro.on('console', (m) => { if (m.type() === 'error') erreurs.push(m.text()) })
+brancher(pagePro)
 
 await pagePro.goto(`${BASE}/pro`, { waitUntil: 'networkidle0' })
 await attendreSur(pagePro, 'Espace professionnel')
@@ -239,8 +259,13 @@ console.log(' ', ok(await attendre('Réponse du salon')), 'la réponse est publi
 console.log(' ', ok(await attendre(REPONSE)), 'son texte est bien celui saisi')
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/avis.png', fullPage: true })
 
-console.log('\n─── Erreurs console ────────────────────────────────')
-console.log(' ', ok(erreurs.length === 0), erreurs.length === 0 ? 'aucune' : erreurs.slice(0, 3).join(' | '))
+console.log('\n─── Bilan ──────────────────────────────────────────')
+console.log(' ', ok(erreurs.length === 0),
+  erreurs.length === 0 ? 'aucune erreur JavaScript' : `erreurs JS : ${erreurs.slice(0, 3).join(' | ')}`)
+if (reseau.length > 0) {
+  console.log(`   ${reseau.length} réponse(s) HTTP en erreur, gérées par l'interface :`)
+  for (const r of [...new Set(reseau)].slice(0, 3)) console.log(`     ${r}`)
+}
 
 await browser.close()
 process.exit(erreurs.length === 0 ? 0 : 1)

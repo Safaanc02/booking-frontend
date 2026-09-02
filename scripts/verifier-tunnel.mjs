@@ -27,9 +27,30 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage()
 await page.setViewport({ width: 1280, height: 900 })
 
+/**
+ * Deux catégories distinctes, et une seule fait échouer le test.
+ *
+ * `pageerror` signale une exception JavaScript : c'est un défaut. Les messages
+ * console de type error incluent aussi les réponses HTTP 4xx/5xx journalisées
+ * par le navigateur — or un 409 « créneau déjà réservé » est une réponse
+ * applicative correcte, que l'interface est faite pour gérer. Les confondre
+ * rendait le test rouge alors que tout fonctionnait.
+ */
 const erreurs = []
-page.on('pageerror', (e) => erreurs.push(String(e)))
-page.on('console', (m) => { if (m.type() === 'error') erreurs.push(m.text()) })
+const reseau = []
+const brancher = (p) => {
+  p.on('pageerror', (e) => erreurs.push(String(e)))
+  p.on('console', (m) => {
+    if (m.type() !== 'error') return
+    const t = m.text()
+    if (/Failed to load resource|net::ERR_/.test(t)) {
+      const url = m.location()?.url ?? ''
+      reseau.push(`${t} — ${url.replace('http://localhost:8080', '')}`)
+    }
+    else erreurs.push(t)
+  })
+}
+brancher(page)
 
 const txt = () => page.evaluate(() => document.body.innerText)
 /**
@@ -138,7 +159,23 @@ console.log('\n─── Connexion au dernier moment ─────────
 // On repart d'un tunnel neuf, prestation pré-sélectionnée depuis la fiche salon.
 await page.goto(`${BASE}/salon/1/reserver?prestationId=1`, { waitUntil: 'networkidle0' })
 await clic('Sans préférence')
+await attendreCreneaux()
+/**
+ * On choisit un jour éloigné, pas le premier disponible.
+ *
+ * Les salons exigent un préavis d'annulation (12 h chez Dar Zine). Réserver
+ * le premier créneau libre — souvent quelques heures plus tard — rendait la
+ * réservation non annulable, et le serveur répondait 409 à juste titre. Le
+ * test doit se placer dans le cas qu'il prétend vérifier.
+ */
+const joursOuverts = await page.evaluate(() =>
+  [...document.querySelectorAll('button')]
+    .filter((b) => !b.disabled && /^\w+\.? \d+ \w+\.?$/.test(b.innerText.trim()))
+    .map((b) => b.innerText.trim()))
+const jourLointain = joursOuverts[Math.min(2, joursOuverts.length - 1)]
+await clic(jourLointain)
 const dispos = await attendreCreneaux()
+console.log(' ', ok(dispos.length > 0), `jour retenu : ${jourLointain} (${dispos.length} créneaux)`)
 const retenu = dispos[dispos.length - 1]
 await clic(retenu)
 
@@ -173,14 +210,66 @@ console.log(' ', ok(t.includes('Confirmée')), 'statut CONFIRMEE')
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/compte.png' })
 
 console.log('\n─── Annulation ─────────────────────────────────────')
-await clic('Annuler')
-await attendre('Historique')
-t = await txt()
-console.log(' ', ok(contient(t, 'Historique')), 'basculée dans l\'historique')
-console.log(' ', ok(t.includes('Annulée')), 'statut ANNULEE_CLIENT')
+/**
+ * On annule la réservation que ce test vient de créer, repérée par son heure.
+ *
+ * Une version précédente cliquait le premier bouton « Annuler » de la liste.
+ * Sur un jeu de données accumulé, c'était parfois un rendez-vous hors délai :
+ * le serveur répondait 409 à juste titre, et les assertions suivantes
+ * trouvaient quand même « Annulée » sur une ligne plus ancienne. Le test
+ * passait sans rien avoir annulé.
+ */
+/**
+ * On repère la ligne par jour ET heure, puis on retient son identifiant.
+ *
+ * Un repérage par la seule heure était ambigu : les exécutions précédentes
+ * laissent d'autres réservations au même horaire, et le script annulait
+ * parfois une ligne plus ancienne tout en concluant au succès.
+ */
+const jourNumero = (jourLointain.match(/\d+/) ?? [''])[0]
+const cible = await page.evaluate((heure, jour) => {
+  const ligne = [...document.querySelectorAll('li[data-reservation-id]')].find(
+    (li) => li.innerText.includes(`à ${heure}`)
+            && new RegExp(`\\b${jour}\\b`).test(li.innerText)
+            && li.innerText.includes('Annuler'))
+  if (!ligne) return null
+  const bouton = [...ligne.querySelectorAll('button')].find((b) => b.innerText.includes('Annuler'))
+  if (!bouton) return null
+  bouton.click()
+  return ligne.dataset.reservationId
+}, retenu, jourNumero)
+console.log(' ', ok(cible !== null),
+  cible ? `réservation #${cible} (${jourLointain} à ${retenu}) — annulation demandée`
+        : 'ligne annulable introuvable ❌')
 
-console.log('\n─── Erreurs console ────────────────────────────────')
-console.log(' ', ok(erreurs.length === 0), erreurs.length === 0 ? 'aucune' : erreurs.slice(0, 3).join(' | '))
+/** On attend que CETTE ligne ait rejoint l'historique, pas qu'un mot apparaisse. */
+const sectionDe = (id) => page.evaluate((id) => {
+  for (const s of document.querySelectorAll('section')) {
+    const ligne = s.querySelector(`li[data-reservation-id="${id}"]`)
+    if (ligne) return { section: s.querySelector('h2')?.innerText ?? '', texte: ligne.innerText }
+  }
+  return null
+}, id)
+
+let etatLigne = null
+const limiteAnnulation = Date.now() + 15000
+while (cible && Date.now() < limiteAnnulation) {
+  etatLigne = await sectionDe(cible)
+  if (etatLigne && /historique/i.test(etatLigne.section)) break
+  await new Promise((r) => setTimeout(r, 200))
+}
+console.log(' ', ok(etatLigne !== null && /historique/i.test(etatLigne.section)),
+  etatLigne ? `la réservation #${cible} est passée dans « ${etatLigne.section} »` : 'ligne introuvable ❌')
+console.log(' ', ok(etatLigne !== null && etatLigne.texte.includes('Annulée')),
+  'son statut affiché est « Annulée »')
+
+console.log('\n─── Bilan ──────────────────────────────────────────')
+console.log(' ', ok(erreurs.length === 0),
+  erreurs.length === 0 ? 'aucune erreur JavaScript' : `erreurs JS : ${erreurs.slice(0, 3).join(' | ')}`)
+if (reseau.length > 0) {
+  console.log(`   ${reseau.length} réponse(s) HTTP en erreur, gérées par l'interface :`)
+  for (const r of [...new Set(reseau)].slice(0, 3)) console.log(`     ${r}`)
+}
 
 await browser.close()
 process.exit(erreurs.length === 0 ? 0 : 1)

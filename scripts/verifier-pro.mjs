@@ -25,9 +25,30 @@ const browser = await puppeteer.launch({
 })
 const page = await browser.newPage()
 await page.setViewport({ width: 1280, height: 1000 })
+/**
+ * Deux catégories distinctes, et une seule fait échouer le test.
+ *
+ * `pageerror` signale une exception JavaScript : c'est un défaut. Les messages
+ * console de type error incluent aussi les réponses HTTP 4xx/5xx journalisées
+ * par le navigateur — or un 409 « créneau déjà réservé » est une réponse
+ * applicative correcte, que l'interface est faite pour gérer. Les confondre
+ * rendait le test rouge alors que tout fonctionnait.
+ */
 const erreurs = []
-page.on('pageerror', (e) => erreurs.push(String(e)))
-page.on('console', (m) => { if (m.type() === 'error') erreurs.push(m.text()) })
+const reseau = []
+const brancher = (p) => {
+  p.on('pageerror', (e) => erreurs.push(String(e)))
+  p.on('console', (m) => {
+    if (m.type() !== 'error') return
+    const t = m.text()
+    if (/Failed to load resource|net::ERR_/.test(t)) {
+      const url = m.location()?.url ?? ''
+      reseau.push(`${t} — ${url.replace('http://localhost:8080', '')}`)
+    }
+    else erreurs.push(t)
+  })
+}
+brancher(page)
 
 const txt = () => page.evaluate(() => document.body.innerText)
 const contient = (s, a) => s.toLocaleLowerCase('fr').includes(a.toLocaleLowerCase('fr'))
@@ -174,8 +195,13 @@ if (creneaux.length > 0) {
 
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/pro-agenda.png', fullPage: true })
 
-console.log('\n─── Erreurs console ────────────────────────────────')
-console.log(' ', ok(erreurs.length === 0), erreurs.length === 0 ? 'aucune' : erreurs.slice(0, 3).join(' | '))
+console.log('\n─── Bilan ──────────────────────────────────────────')
+console.log(' ', ok(erreurs.length === 0),
+  erreurs.length === 0 ? 'aucune erreur JavaScript' : `erreurs JS : ${erreurs.slice(0, 3).join(' | ')}`)
+if (reseau.length > 0) {
+  console.log(`   ${reseau.length} réponse(s) HTTP en erreur, gérées par l'interface :`)
+  for (const r of [...new Set(reseau)].slice(0, 3)) console.log(`     ${r}`)
+}
 
 await browser.close()
 process.exit(erreurs.length === 0 ? 0 : 1)

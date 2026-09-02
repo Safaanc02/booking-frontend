@@ -108,7 +108,14 @@ function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis }
         {liste.map((r) => {
           const [libelle, classes] = BADGES[r.statut] ?? [r.statut, "bg-stone-100 text-stone-600 ring-stone-200"]
           return (
-            <li key={r.id} className="flex flex-wrap items-start justify-between gap-4 p-5">
+            <li
+              key={r.id}
+              // data-reservation-id : point d'accroche stable pour les scripts
+              // de vérification. Deux réservations peuvent partager le même
+              // jour et la même heure : un repérage par texte est ambigu.
+              data-reservation-id={r.id}
+              className="flex flex-wrap items-start justify-between gap-4 p-5"
+            >
               <div className="min-w-0">
                 <p className="font-medium text-stone-900">{r.prestation}</p>
                 <p className="mt-0.5 text-sm text-stone-600">
@@ -123,14 +130,25 @@ function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis }
                   {libelle}
                 </span>
                 <span className="text-sm font-semibold text-stone-900">{prix(r.prix)}</span>
+                {/* Le bouton n'apparaît que si le serveur dit l'annulation
+                    encore possible. L'afficher puis répondre 409 est une
+                    promesse qu'on ne tient pas. */}
                 {annulable && (
-                  <button
-                    onClick={() => onAnnuler(r.id)}
-                    disabled={enCours === r.id}
-                    className="text-xs text-stone-500 underline hover:text-red-700 disabled:opacity-50"
-                  >
-                    {enCours === r.id ? "Annulation…" : "Annuler"}
-                  </button>
+                  r.annulable ? (
+                    <button
+                      onClick={() => onAnnuler(r.id)}
+                      disabled={enCours === r.id}
+                      className="text-xs text-stone-500 underline hover:text-red-700 disabled:opacity-50"
+                    >
+                      {enCours === r.id ? "Annulation…" : "Annuler"}
+                    </button>
+                  ) : (
+                    <span className="text-right text-xs text-stone-400">
+                      Annulation close
+                      <br />
+                      ({r.delaiAnnulationHeures} h de préavis)
+                    </span>
+                  )
                 )}
               </div>
               {/* Le dépôt d'un avis n'est proposé qu'après un rendez-vous
