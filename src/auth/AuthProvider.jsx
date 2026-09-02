@@ -94,8 +94,20 @@ export default function AuthProvider({ children }) {
           }
         : null,
       hasRole: (role) => roles.includes(role),
-      login: (options) => keycloak.login({ redirectUri: window.location.href, ...optionsSures(options) }),
-      register: () => keycloak.register({ redirectUri: window.location.href }),
+      /**
+       * `locale: "fr"` est explicite à dessein.
+       *
+       * Keycloak suit l'en-tête Accept-Language du navigateur : un visiteur
+       * dont le système est en anglais voyait l'écran de connexion en anglais,
+       * au milieu d'un site entièrement en français. Le sélecteur de langue
+       * reste disponible sur la page pour qui veut en changer.
+       */
+      login: (options) => keycloak.login({
+        redirectUri: window.location.href,
+        locale: "fr",
+        ...optionsSures(options),
+      }),
+      register: () => keycloak.register({ redirectUri: window.location.href, locale: "fr" }),
       logout: () => keycloak.logout({ redirectUri: window.location.origin }),
     }
   }, [ready, authenticated, profil])
