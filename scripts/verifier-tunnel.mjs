@@ -20,6 +20,33 @@ const ok = (c) => (c ? '✅' : '❌')
 const IDENTIFIANT = process.env.TEST_USER ?? 'client1'
 const MOT_DE_PASSE = process.env.TEST_PASSWORD ?? 'client1'
 
+/* ---- Utilitaires d'API, pour préparer et vérifier hors interface ---- */
+const API = process.env.API_URL ?? 'http://localhost:8080'
+const KC = process.env.KC_URL ?? 'http://localhost:8081'
+const SALON = Number(process.env.SALON_ID ?? 1)
+
+const jeton = async (identifiant) => {
+  const r = await fetch(`${KC}/realms/booking-realm/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: 'booking-app', username: identifiant, password: identifiant, grant_type: 'password',
+    }),
+  })
+  if (!r.ok) throw new Error(`authentification ${identifiant} impossible (${r.status})`)
+  return (await r.json()).access_token
+}
+
+const appel = async (chemin, options = {}, token) => {
+  const r = await fetch(`${API}${chemin}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...options.headers },
+  })
+  const corps = r.status === 204 ? null : await r.json().catch(() => null)
+  if (!r.ok) throw new Error(`${options.method ?? 'GET'} ${chemin} → ${r.status} ${JSON.stringify(corps)}`)
+  return corps
+}
+
 const browser = await puppeteer.launch({
   executablePath: CHROME, headless: 'new',
   args: ['--no-sandbox', '--disable-gpu'],
@@ -52,7 +79,9 @@ const brancher = (p) => {
 }
 brancher(page)
 
-const txt = () => page.evaluate(() => document.body.innerText)
+const pause = (ms) => new Promise((r) => setTimeout(r, ms))
+const txtDe = (p) => p.evaluate(() => document.body.innerText)
+const txt = () => txtDe(page)
 /**
  * Comparaison insensible à la casse et aux accents.
  * innerText renvoie le texte tel qu'il est PEINT : un titre en
@@ -68,14 +97,15 @@ const contient = (source, attendu) =>
  * peu lente (Vite qui retransforme après une modification) suffisait à faire
  * échouer l'étape 1 alors que l'application était correcte.
  */
-const attendre = async (attendu, timeout = 15000) => {
+const attendreSur = async (p, attendu, timeout = 15000) => {
   const limite = Date.now() + timeout
   while (Date.now() < limite) {
-    if (contient(await txt(), attendu)) return true
-    await new Promise((r) => setTimeout(r, 150))
+    if (contient(await txtDe(p), attendu)) return true
+    await pause(150)
   }
   return false
 }
+const attendre = (attendu, timeout) => attendreSur(page, attendu, timeout)
 
 /** Attend que des créneaux horaires soient rendus, et les renvoie. */
 const attendreCreneaux = async (timeout = 15000) => {
@@ -95,22 +125,23 @@ const attendreCreneaux = async (timeout = 15000) => {
  * page se recale entre le scroll et le clic — ce qui donne un faux négatif
  * silencieux : aucune erreur, aucune requête.
  */
-const clic = async (filtre, timeout = 15000) => {
+const clicSur = async (p, filtre, timeout = 15000) => {
   const limite = Date.now() + timeout
   let fait = false
   while (Date.now() < limite && !fait) {
-    fait = await page.evaluate((f) => {
+    fait = await p.evaluate((f) => {
       const els = [...document.querySelectorAll('button, a')]
       const el = els.find((e) => e.innerText.trim() === f) ?? els.find((e) => e.innerText.includes(f))
       if (!el || el.disabled) return false
       el.click()
       return true
     }, filtre)
-    if (!fait) await new Promise((r) => setTimeout(r, 150))
+    if (!fait) await pause(150)
   }
   if (!fait) throw new Error(`introuvable ou désactivé après ${timeout} ms : ${filtre}`)
-  await new Promise((r) => setTimeout(r, 400))
+  await pause(400)
 }
+const clic = (filtre, timeout) => clicSur(page, filtre, timeout)
 
 console.log('─── Étape 1 : choix de la prestation ───────────────')
 await page.goto(`${BASE}/salon/1/reserver`, { waitUntil: 'networkidle0' })
@@ -262,6 +293,89 @@ console.log(' ', ok(etatLigne !== null && /historique/i.test(etatLigne.section))
   etatLigne ? `la réservation #${cible} est passée dans « ${etatLigne.section} »` : 'ligne introuvable ❌')
 console.log(' ', ok(etatLigne !== null && etatLigne.texte.includes('Annulée')),
   'son statut affiché est « Annulée »')
+
+console.log('\n─── Annulation depuis l\'email ──────────────────────')
+/**
+ * Le lien signé reçu par email permet d'annuler sans se connecter.
+ *
+ * Le jeton est récupéré dans Mailpit, le serveur SMTP de développement. Si
+ * Mailpit n'est pas joignable, cette section est annoncée comme non exécutée
+ * plutôt que silencieusement sautée : un test qui se taît fait croire à une
+ * couverture qu'il n'a pas.
+ */
+const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025'
+let mailpitJoignable = false
+try {
+  mailpitJoignable = (await fetch(`${MAILPIT}/api/v1/messages`, { signal: AbortSignal.timeout(3000) })).ok
+} catch {
+  mailpitJoignable = false
+}
+
+if (!mailpitJoignable) {
+  console.log('   ⚠️  Mailpit injoignable — section NON exécutée (docker compose up mailpit)')
+} else {
+  // Nouvelle réservation dédiée : celle du tunnel vient d'être annulée.
+  const client = await jeton('client1')
+  await fetch(`${MAILPIT}/api/v1/messages`, { method: 'DELETE' })
+
+  const fiche = await (await fetch(`${API}/api/public/salons/${SALON}`)).json()
+  const prestation = fiche.prestations[0]
+  const jours = await (await fetch(
+    `${API}/api/public/salons/${SALON}/prochaines-dispos?prestationId=${prestation.id}&jours=14`)).json()
+  // Un jour éloigné, pour rester dans le préavis d'annulation du salon.
+  const jourCible = jours[Math.min(2, jours.length - 1)]
+  const dispos = await (await fetch(
+    `${API}/api/public/salons/${SALON}/disponibilites?prestationId=${prestation.id}&date=${jourCible}`)).json()
+  const creneau = dispos.creneaux[dispos.creneaux.length - 1]
+
+  const creee = await appel('/api/reservations', {
+    method: 'POST',
+    body: JSON.stringify({ salonId: SALON, prestationId: prestation.id, debut: creneau.debut }),
+  }, client)
+  console.log(' ', ok(!!creee.id), `réservation #${creee.id} créée pour le test du lien`)
+
+  // L'email part de façon asynchrone, après le commit de la transaction.
+  let lien = null
+  const limiteMail = Date.now() + 20000
+  while (Date.now() < limiteMail && !lien) {
+    const boite = await (await fetch(`${MAILPIT}/api/v1/messages`)).json()
+    const confirmation = boite.messages?.find((m) => m.Subject.includes('confirmé'))
+    if (confirmation) {
+      const detail = await (await fetch(`${MAILPIT}/api/v1/message/${confirmation.ID}`)).json()
+      const trouve = /\/annuler\?token=([\w.\-]+)/.exec(detail.HTML ?? '')
+      if (trouve) lien = trouve[1]
+    }
+    if (!lien) await pause(400)
+  }
+  console.log(' ', ok(lien !== null), lien ? 'lien d\'annulation présent dans l\'email' : 'lien absent ❌')
+
+  if (lien) {
+    // Contexte neuf, sans session : c'est tout l'intérêt du lien signé.
+    const contexteAnonyme = await browser.createBrowserContext()
+    const pageAnonyme = await contexteAnonyme.newPage()
+    await pageAnonyme.setViewport({ width: 1280, height: 900 })
+    await pageAnonyme.setCacheEnabled(false)
+    brancher(pageAnonyme)
+
+    await pageAnonyme.goto(`${BASE}/annuler?token=${lien}`, { waitUntil: 'networkidle0' })
+    console.log(' ', ok(await attendreSur(pageAnonyme, 'Annuler ce rendez-vous')),
+      'page accessible sans être connecté')
+    console.log(' ', ok(await attendreSur(pageAnonyme, prestation.nom)),
+      'le rendez-vous visé est bien décrit')
+
+    await clicSur(pageAnonyme, "Confirmer l'annulation")
+    console.log(' ', ok(await attendreSur(pageAnonyme, 'Rendez-vous annulé')), 'annulation confirmée')
+
+    // Le serveur est seul juge : on vérifie l'état réel, pas l'écran.
+    const apres = await appel('/api/reservations/me', {}, client)
+    const ligne = apres.find((r) => r.id === creee.id)
+    console.log(' ', ok(ligne?.statut === 'ANNULEE_CLIENT'),
+      `statut en base : ${ligne?.statut}`)
+
+    if (process.env.SHOT) await pageAnonyme.screenshot({ path: process.env.SHOT + '/annulation-lien.png' })
+    await contexteAnonyme.close()
+  }
+}
 
 console.log('\n─── Bilan ──────────────────────────────────────────')
 console.log(' ', ok(erreurs.length === 0),

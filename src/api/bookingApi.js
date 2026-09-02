@@ -39,6 +39,15 @@ export const publicApi = {
     client.get(`/api/public/salons/${salonId}/avis`, { params: { page, size } }).then((r) => r.data),
 }
 
+/** Annulation depuis un email : aucun jeton d'authentification, un lien signé. */
+export const annulationApi = {
+  apercu: (token) =>
+    client.get("/api/public/reservations/apercu", { params: { token } }).then((r) => r.data),
+  // POST et non GET : les clients de messagerie préchargent les liens GET.
+  confirmer: (token) =>
+    client.post("/api/public/reservations/annuler", null, { params: { token } }).then((r) => r.data),
+}
+
 export const avisApi = {
   deposer: (payload) => client.post("/api/avis", payload).then((r) => r.data),
   repondre: (avisId, reponse) =>
