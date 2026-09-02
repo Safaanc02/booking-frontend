@@ -51,6 +51,12 @@ export default function ProDashboard() {
             Prestations, équipe et horaires : une quinzaine de minutes, et vos clients
             réservent en ligne à toute heure.
           </p>
+          {/* Un membre d'équipe arrive ici sans posséder de salon : on l'oriente
+              plutôt que de le laisser devant une invitation qui ne le concerne pas. */}
+          <p className="mx-auto mt-3 max-w-sm text-sm text-stone-500">
+            Vous faites partie d'une équipe ? Vos rendez-vous sont dans{" "}
+            <Link to="/mon-planning" className="text-brand-700 underline">Mon planning</Link>.
+          </p>
           <button
             onClick={() => setCreation(true)}
             className="mt-5 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
@@ -73,7 +79,16 @@ export default function ProDashboard() {
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-stone-900">{s.nom}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-stone-900">{s.nom}</p>
+                      {/* On distingue ce qu'on possède de ce qu'on gère : le
+                          gestionnaire n'a pas le droit de supprimer le salon. */}
+                      {s.monRole === "GESTIONNAIRE" && (
+                        <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600 ring-1 ring-stone-200">
+                          Gestion déléguée
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-0.5 text-sm text-stone-500">
                       {s.adresse} · {s.ville}
                     </p>

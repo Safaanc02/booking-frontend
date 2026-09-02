@@ -81,6 +81,10 @@ export const proApi = {
   changerStatut: (reservationId, statut) =>
     client.patch(`/api/pro/reservations/${reservationId}/statut`, null, { params: { statut } }).then((r) => r.data),
 
+  /** Planning personnel du compte connecté, tous salons confondus. */
+  monPlanning: ({ date, jours = 1 } = {}) =>
+    client.get('/api/pro/mon-planning', { params: { date, jours } }).then((r) => r.data),
+
   /* Équipe */
   employes: (salonId) => client.get(`/api/pro/salons/${salonId}/employes`).then((r) => r.data),
   creerEmploye: (salonId, payload) =>

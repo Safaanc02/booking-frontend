@@ -19,12 +19,17 @@ export default function OngletEquipe({ salon }) {
 
   useEffect(charger, [charger])
 
+  const [erreur, setErreur] = useState(null)
+
   const ajouter = (e) => {
     e.preventDefault()
+    setErreur(null)
     proApi
       .creerEmploye(salon.id, form)
       .then(() => { setForm(null); charger() })
-      .catch(() => charger())
+      // Le message du serveur est utile ici : « aucun compte pour cet email,
+      // la personne doit s'être connectée au moins une fois ».
+      .catch((err) => setErreur(err))
   }
 
   const basculer = (employeId, prestationId, coche) => {
@@ -42,7 +47,7 @@ export default function OngletEquipe({ salon }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold text-stone-900">Équipe</h2>
         <button
-          onClick={() => setForm(form ? null : { prenom: "", nom: "", titre: "" })}
+          onClick={() => { setErreur(null); setForm(form ? null : { prenom: "", nom: "", titre: "", role: "PRATICIEN", email: "" }) }}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
         >
           {form ? "Fermer" : "Ajouter un praticien"}
@@ -54,6 +59,40 @@ export default function OngletEquipe({ salon }) {
           <Champ label="Prénom" value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} required />
           <Champ label="Nom" value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} />
           <Champ label="Titre" value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} placeholder="Coloriste…" />
+
+          <Champ
+            label="Email du compte (facultatif)"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            placeholder="sofia@monsalon.ma"
+            erreur={erreur?.details?.email}
+            className="sm:col-span-2"
+          />
+          <label className="block">
+            <span className="text-sm text-stone-600">Droits</span>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="mt-1 w-full rounded-xl border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+            >
+              <option value="PRATICIEN">Praticien — son planning</option>
+              <option value="GESTIONNAIRE">Gestionnaire — gère le salon</option>
+            </select>
+          </label>
+
+          <p className="text-sm text-stone-500 sm:col-span-3">
+            Sans email, la fiche sert uniquement à l'agenda : la personne n'a aucun accès.
+            Avec un email, elle doit s'être connectée au moins une fois sur le site pour
+            que le compte existe.
+          </p>
+
+          {erreur && !erreur.details && (
+            <p className="rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-800 ring-1 ring-red-200 sm:col-span-3">
+              {erreur.message}
+            </p>
+          )}
+
           <button type="submit" className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 sm:col-span-3 sm:justify-self-start">
             Ajouter
           </button>
@@ -71,8 +110,20 @@ export default function OngletEquipe({ salon }) {
               <li key={e.id} className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-medium text-stone-900">{e.prenom} {e.nom}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-stone-900">{e.prenom} {e.nom}</p>
+                      {e.role === "GESTIONNAIRE" && (
+                        <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-brand-200">
+                          Gestionnaire
+                        </span>
+                      )}
+                    </div>
                     {e.titre && <p className="text-sm text-stone-500">{e.titre}</p>}
+                    {/* Sans compte rattaché, la personne n'a aucun accès : on le dit
+                        plutôt que de laisser croire le contraire. */}
+                    <p className="mt-0.5 text-xs text-stone-400">
+                      {e.compteEmail ? `Accès : ${e.compteEmail}` : "Aucun accès — fiche d'agenda seulement"}
+                    </p>
                   </div>
                   <button
                     onClick={() => proApi.desactiverEmploye(e.id).then(charger)}

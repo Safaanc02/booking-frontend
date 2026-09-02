@@ -9,6 +9,7 @@ import AnnulationParLien from "./pages/AnnulationParLien"
 import RequireRole from "./components/RequireRole"
 import ProDashboard from "./pages/pro/ProDashboard"
 import ProSalon from "./pages/pro/ProSalon"
+import MonPlanning from "./pages/pro/MonPlanning"
 import AdminSalons from "./pages/admin/AdminSalons"
 import Account from "./pages/Account"
 import Legal from "./pages/Legal"
@@ -30,6 +31,8 @@ export default function App() {
               {/* Accessible sans connexion : le lien signé fait office d'autorisation. */}
               <Route path="/annuler" element={<AnnulationParLien />} />
               <Route path="/pro" element={<RequireRole role="pro"><ProDashboard /></RequireRole>} />
+              {/* Accessible à tout membre d'équipe, pas seulement aux propriétaires. */}
+              <Route path="/mon-planning" element={<RequireRole role="pro"><MonPlanning /></RequireRole>} />
               <Route path="/pro/salon/:id" element={<RequireRole role="pro"><ProSalon /></RequireRole>} />
               <Route path="/admin" element={<RequireRole role="admin"><AdminSalons /></RequireRole>} />
               <Route path="/mentions-legales" element={<Legal />} />
