@@ -171,18 +171,46 @@ console.log(' ', ok(await attendre('Horaires enregistrés')), 'horaires enregist
 console.log('\n─── Rendez-vous pris au téléphone ──────────────────')
 await clic('Agenda')
 await attendre('Aujourd\'hui')
-await clic('Rendez-vous par téléphone')
-await attendre('Nom du client')
-await saisir('Praticien', await page.evaluate(() => {
-  const lab = [...document.querySelectorAll('label')].find((e) => e.innerText.trim().startsWith('Praticien'))
-  const opt = [...lab.querySelectorAll('option')].find((o) => o.value)
-  return opt ? opt.value : ''
-}))
-await new Promise((r) => setTimeout(r, 1500))
-const creneaux = await page.evaluate(() => {
+
+/**
+ * On avance d'au moins un jour avant de saisir.
+ *
+ * Le formulaire propose par défaut le jour affiché à l'agenda, c'est-à-dire
+ * aujourd'hui. Lancé le soir après la fermeture, ou un dimanche, le test ne
+ * trouvait aucun créneau et échouait sur un comportement pourtant juste : il
+ * ne passait que le matin. On avance jusqu'à tomber sur un jour ouvert.
+ */
+const optionsCreneau = () => page.evaluate(() => {
   const lab = [...document.querySelectorAll('label')].find((e) => e.innerText.trim().startsWith('Créneau'))
+  if (!lab) return null
   return [...lab.querySelectorAll('option')].filter((o) => o.value).map((o) => o.value)
 })
+
+const choisirPremierPraticien = async () => {
+  const valeur = await page.evaluate(() => {
+    const lab = [...document.querySelectorAll('label')].find((e) => e.innerText.trim().startsWith('Praticien'))
+    const opt = lab ? [...lab.querySelectorAll('option')].find((o) => o.value) : null
+    return opt ? opt.value : ''
+  })
+  if (valeur) await saisir('Praticien', valeur)
+  return valeur
+}
+
+let creneaux = []
+let joursAvances = 0
+await clic('Rendez-vous par téléphone')
+await attendre('Nom du client')
+
+for (; joursAvances < 8; joursAvances++) {
+  await choisirPremierPraticien()
+  await new Promise((r) => setTimeout(r, 1500))
+  creneaux = (await optionsCreneau()) ?? []
+  if (creneaux.length > 0) break
+  // Jour suivant : le sélecteur de créneau se recharge sur le nouveau jour.
+  await clic('→')
+  await new Promise((r) => setTimeout(r, 900))
+}
+console.log(' ', ok(joursAvances < 8), `jour ouvert trouvé après ${joursAvances} avance(s)`)
 console.log(' ', ok(creneaux.length > 0), `${creneaux.length} créneaux calculés depuis les horaires saisis`)
 if (creneaux.length > 0) {
   await saisir('Créneau', creneaux[0])
