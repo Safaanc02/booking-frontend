@@ -51,20 +51,42 @@ const appel = async (chemin, options = {}, token) => {
   return corps
 }
 
+/**
+ * Résout le compte propriétaire d'un salon.
+ *
+ * Chaque salon a le sien : se connecter en pro1 ne donne accès qu'à Atlas
+ * Barber. Toute écriture « côté salon » doit donc passer par le bon compte,
+ * y compris pendant la préparation — sinon le serveur répond 403, à juste
+ * titre.
+ *
+ * Convention des comptes de démonstration : mot de passe = identifiant.
+ */
+const proprietaireDuSalon = async (salonId, salonNom, admin) => {
+  const liste = await (await fetch(
+    `${API}/api/public/salons?q=${encodeURIComponent(salonNom)}&size=50`)).json()
+  let ownerId = liste.content?.find((x) => x.id === salonId)?.ownerId
+
+  if (!ownerId) {
+    // Salon non publié : on passe par la file d'administration.
+    for (const statut of ['EN_ATTENTE', 'ACTIF', 'SUSPENDU']) {
+      const page = await appel(`/api/admin/salons?statut=${statut}&size=100`, {}, admin)
+      ownerId = page.content?.find((x) => x.id === salonId)?.ownerId
+      if (ownerId) break
+    }
+  }
+  if (!ownerId) throw new Error(`propriétaire du salon #${salonId} introuvable`)
+
+  const owner = await appel(`/api/users/${ownerId}`, {}, admin)
+  return owner.username
+}
+
 const preparerRendezVousHonore = async () => {
   const client = await jeton('client1')
-  const pro = await jeton('pro1')
+  const admin = await jeton('admin')
 
   const miennes = await appel('/api/reservations/me', {}, client)
   let cible = miennes.find((r) => r.statut === 'HONOREE' && !r.avisDepose)
-
-  if (!cible) {
-    const candidate = miennes.find((r) => r.statut === 'CONFIRMEE' && !r.avisDepose)
-    if (candidate) {
-      await appel(`/api/pro/reservations/${candidate.id}/statut?statut=HONOREE`, { method: 'PATCH' }, pro)
-      cible = candidate
-    }
-  }
+            ?? miennes.find((r) => r.statut === 'CONFIRMEE' && !r.avisDepose)
 
   if (!cible) {
     // Aucune réservation exploitable : on en crée une sur le premier créneau libre.
@@ -82,28 +104,28 @@ const preparerRendezVousHonore = async () => {
     const creneau = dispos.creneaux?.[dispos.creneaux.length - 1]
     if (!creneau) throw new Error('aucun créneau libre')
 
-    const creee = await appel('/api/reservations', {
+    cible = await appel('/api/reservations', {
       method: 'POST',
       body: JSON.stringify({ salonId: SALON, prestationId: prestation.id, debut: creneau.debut }),
     }, client)
-    await appel(`/api/pro/reservations/${creee.id}/statut?statut=HONOREE`, { method: 'PATCH' }, pro)
-    cible = creee
   }
 
-  /**
-   * On renvoie aussi le salon concerné.
-   *
-   * Une version précédente vérifiait toujours la fiche du salon 1, quelle que
-   * soit la réservation retenue : sur un jeu de données où celle-ci appartient
-   * à un autre salon, le test cherchait le commentaire sur la mauvaise page.
-   */
-  return { id: cible.id, salonId: cible.salonId, salonNom: cible.salonNom }
+  // Le propriétaire est résolu AVANT toute écriture côté salon.
+  const proprietaire = await proprietaireDuSalon(cible.salonId, cible.salonNom, admin)
+
+  if (cible.statut !== 'HONOREE') {
+    const tokenPro = await jeton(proprietaire)
+    await appel(`/api/pro/reservations/${cible.id}/statut?statut=HONOREE`, { method: 'PATCH' }, tokenPro)
+  }
+
+  return { id: cible.id, salonId: cible.salonId, salonNom: cible.salonNom, proprietaire }
 }
 
 const rdv = await preparerRendezVousHonore()
 const SALON = rdv.salonId
 console.log(`─── Préparation ────────────────────────────────────`)
 console.log(`   rendez-vous #${rdv.id} chez ${rdv.salonNom} (salon #${SALON}), honoré et sans avis`)
+console.log(`   propriétaire du salon : ${rdv.proprietaire}`)
 console.log()
 
 const browser = await puppeteer.launch({
@@ -244,7 +266,7 @@ brancher(pagePro)
 
 await pagePro.goto(`${BASE}/pro`, { waitUntil: 'networkidle0' })
 await attendreSur(pagePro, 'Espace professionnel')
-await connecterSur(pagePro, 'pro1', 'pro1')
+await connecterSur(pagePro, rdv.proprietaire, rdv.proprietaire)
 console.log(' ', ok(await attendreSur(pagePro, 'Mes salons')), 'tableau de bord professionnel')
 
 await clicSur(pagePro, rdv.salonNom)
