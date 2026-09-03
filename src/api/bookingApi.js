@@ -62,7 +62,6 @@ export const reservationsApi = {
 
 export const salonsApi = {
   mesSalons: () => client.get("/api/salons/me").then((r) => r.data),
-  creer: (payload) => client.post("/api/salons", payload).then((r) => r.data),
   modifier: (id, payload) => client.put(`/api/salons/${id}`, payload).then((r) => r.data),
 }
 
@@ -110,6 +109,15 @@ export const adminApi = {
     client.get("/api/admin/salons", { params: { statut, page, size: 50 } }).then((r) => r.data),
   changerStatut: (salonId, statut) =>
     client.patch(`/api/admin/salons/${salonId}/statut`, null, { params: { statut } }).then((r) => r.data),
+  /**
+   * Référence un salon pour le compte d'un gérant.
+   *
+   * Un seul appel crée le compte, attribue le rôle professionnel, crée le
+   * salon à son nom et envoie l'invitation à définir un mot de passe.
+   */
+  referencerSalon: (payload) =>
+    client.post("/api/admin/salons", payload).then((r) => r.data),
+
   avis: (statut = "PUBLIE", page = 0) =>
     client.get("/api/admin/avis", { params: { statut, page, size: 50 } }).then((r) => r.data),
   modererAvis: (avisId, statut) =>

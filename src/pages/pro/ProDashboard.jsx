@@ -4,7 +4,6 @@ import { salonsApi } from "../../api/bookingApi"
 import { telephone } from "../../lib/format"
 import Loader, { ErrorState } from "../../components/Loader"
 
-const CATEGORIES = ["COIFFURE", "BARBIER", "ONGLERIE", "ESTHETIQUE", "SPA"]
 const LIBELLES = {
   EN_ATTENTE: ["En attente de validation", "bg-amber-50 text-amber-700 ring-amber-200"],
   ACTIF:      ["En ligne", "bg-emerald-50 text-emerald-700 ring-emerald-200"],
@@ -13,7 +12,6 @@ const LIBELLES = {
 
 export default function ProDashboard() {
   const [etat, setEtat] = useState({ statut: "chargement", data: [], erreur: null })
-  const [creation, setCreation] = useState(false)
 
   const charger = useCallback(() => {
     setEtat({ statut: "chargement", data: [], erreur: null })
@@ -34,39 +32,32 @@ export default function ProDashboard() {
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-stone-900">Mes salons</h1>
-        {etat.data.length > 0 && !creation && (
-          <button
-            onClick={() => setCreation(true)}
-            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
-          >
-            Ajouter un salon
-          </button>
-        )}
       </div>
 
-      {etat.data.length === 0 && !creation && (
+      {/* Arriver ici sans salon est une anomalie dans le modèle : le salon est
+          installé avant que le compte n'existe. Deux cas subsistent — un membre
+          d'équipe, qu'on oriente vers son planning, et un rattachement qui a
+          échoué, où seule l'équipe peut agir. Dans les deux cas, proposer une
+          création serait un faux espoir : ce compte n'a pas ce droit. */}
+      {etat.data.length === 0 && (
         <div className="mt-6 rounded-2xl bg-white p-8 text-center ring-1 ring-stone-200">
-          <p className="font-medium text-stone-900">Référencez votre salon</p>
+          <p className="font-medium text-stone-900">Aucun salon rattaché à ce compte</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-stone-600">
-            Prestations, équipe et horaires : une quinzaine de minutes, et vos clients
-            réservent en ligne à toute heure.
+            Votre établissement est installé par notre équipe : fiche, catalogue,
+            équipe et horaires sont paramétrés avec vous, puis vous en gardez la main.
           </p>
-          {/* Un membre d'équipe arrive ici sans posséder de salon : on l'oriente
-              plutôt que de le laisser devant une invitation qui ne le concerne pas. */}
           <p className="mx-auto mt-3 max-w-sm text-sm text-stone-500">
             Vous faites partie d'une équipe ? Vos rendez-vous sont dans{" "}
             <Link to="/mon-planning" className="text-brand-700 underline">Mon planning</Link>.
           </p>
-          <button
-            onClick={() => setCreation(true)}
-            className="mt-5 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+          <a
+            href="mailto:contact@booking.ma"
+            className="mt-5 inline-block rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
           >
-            Commencer
-          </button>
+            Contacter l'équipe
+          </a>
         </div>
       )}
-
-      {creation && <FormulaireSalon onAnnuler={() => setCreation(false)} onCree={() => { setCreation(false); charger() }} />}
 
       <ul className="mt-6 space-y-3">
         {etat.data.map((s) => {
@@ -110,70 +101,6 @@ export default function ProDashboard() {
         })}
       </ul>
     </div>
-  )
-}
-
-function FormulaireSalon({ onAnnuler, onCree }) {
-  const [form, setForm] = useState({
-    nom: "", adresse: "", ville: "", quartier: "",
-    telephone: "", email: "", categorie: "COIFFURE",
-  })
-  const [envoi, setEnvoi] = useState({ enCours: false, erreur: null })
-  const maj = (k) => (e) => setForm({ ...form, [k]: e.target.value })
-
-  const soumettre = (e) => {
-    e.preventDefault()
-    setEnvoi({ enCours: true, erreur: null })
-    salonsApi
-      .creer(form)
-      .then(onCree)
-      .catch((erreur) => setEnvoi({ enCours: false, erreur }))
-  }
-
-  const champs = envoi.erreur?.details ?? {}
-
-  return (
-    <form onSubmit={soumettre} className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
-      <h2 className="font-semibold text-stone-900">Nouveau salon</h2>
-
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Champ label="Nom du salon" value={form.nom} onChange={maj("nom")} erreur={champs.nom} required />
-        <Champ label="Ville" value={form.ville} onChange={maj("ville")} erreur={champs.ville} required />
-        <Champ label="Adresse" value={form.adresse} onChange={maj("adresse")} erreur={champs.adresse} required className="sm:col-span-2" />
-        <Champ label="Quartier" value={form.quartier} onChange={maj("quartier")} erreur={champs.quartier} placeholder="Guéliz, Maarif…" />
-        <Champ label="Téléphone" value={form.telephone} onChange={maj("telephone")} erreur={champs.telephone} placeholder="0612345678" required />
-        <Champ label="Email" type="email" value={form.email} onChange={maj("email")} erreur={champs.email} />
-        <label className="block">
-          <span className="text-sm text-stone-600">Catégorie</span>
-          <select
-            value={form.categorie}
-            onChange={maj("categorie")}
-            className="mt-1 w-full rounded-xl border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
-          >
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c.charAt(0) + c.slice(1).toLowerCase()}</option>)}
-          </select>
-        </label>
-      </div>
-
-      {envoi.erreur && !envoi.erreur.details && (
-        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-red-200">
-          {envoi.erreur.message}
-        </p>
-      )}
-
-      <div className="mt-5 flex gap-3">
-        <button
-          type="submit"
-          disabled={envoi.enCours}
-          className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:bg-stone-300"
-        >
-          {envoi.enCours ? "Création…" : "Créer le salon"}
-        </button>
-        <button type="button" onClick={onAnnuler} className="text-sm text-stone-500 hover:text-stone-800">
-          Annuler
-        </button>
-      </div>
-    </form>
   )
 }
 

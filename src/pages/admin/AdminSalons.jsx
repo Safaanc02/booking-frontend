@@ -2,25 +2,30 @@ import { useCallback, useEffect, useState } from "react"
 import { adminApi } from "../../api/bookingApi"
 import { telephone } from "../../lib/format"
 import Loader, { EmptyState, ErrorState } from "../../components/Loader"
+import ReferencerSalon from "./ReferencerSalon"
 
-const FILTRES = [
+const ONGLETS = [
+  ["REFERENCER", "Référencer"],
   ["EN_ATTENTE", "À valider"],
   ["ACTIF", "En ligne"],
   ["SUSPENDU", "Suspendus"],
 ]
 
 /**
- * File de validation des salons.
+ * Référencement et validation des salons.
  *
- * Sans cet écran, un salon créé par un professionnel ne devient jamais
- * visible : la route existait, mais il fallait passer par curl.
+ * Le premier onglet est l'entrée du métier : c'est l'équipe qui installe le
+ * salon, pas le professionnel qui s'inscrit. Les suivants sont la file de
+ * validation, sans laquelle un salon ne devient jamais visible.
  */
 export default function AdminSalons() {
-  const [statut, setStatut] = useState("EN_ATTENTE")
+  const [onglet, setOnglet] = useState("REFERENCER")
+  const statut = onglet === "REFERENCER" ? null : onglet
   const [etat, setEtat] = useState({ statut: "chargement", data: [], erreur: null })
   const [action, setAction] = useState({ id: null, erreur: null })
 
   const charger = useCallback(() => {
+    if (!statut) return
     setEtat({ statut: "chargement", data: [], erreur: null })
     adminApi
       .salons(statut)
@@ -46,12 +51,12 @@ export default function AdminSalons() {
       </p>
 
       <nav className="mt-5 flex gap-1 border-b border-stone-200">
-        {FILTRES.map(([cle, libelle]) => (
+        {ONGLETS.map(([cle, libelle]) => (
           <button
             key={cle}
-            onClick={() => setStatut(cle)}
+            onClick={() => setOnglet(cle)}
             className={`border-b-2 px-4 py-2.5 text-sm transition ${
-              statut === cle
+              onglet === cle
                 ? "border-brand-600 font-semibold text-brand-700"
                 : "border-transparent text-stone-500 hover:text-stone-800"
             }`}
@@ -68,10 +73,14 @@ export default function AdminSalons() {
       )}
 
       <div className="mt-6">
-        {etat.statut === "chargement" && <Loader />}
-        {etat.statut === "erreur" && <ErrorState erreur={etat.erreur} onRetry={charger} />}
+        {!statut && <ReferencerSalon />}
 
-        {etat.statut === "ok" && (
+        {statut && etat.statut === "chargement" && <Loader />}
+        {statut && etat.statut === "erreur" && (
+          <ErrorState erreur={etat.erreur} onRetry={charger} />
+        )}
+
+        {statut && etat.statut === "ok" && (
           etat.data.length === 0 ? (
             <EmptyState titre={statut === "EN_ATTENTE" ? "Aucun salon en attente" : "Aucun salon"} />
           ) : (

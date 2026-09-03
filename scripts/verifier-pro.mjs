@@ -1,10 +1,14 @@
 /**
  * Parcours d'installation d'un salon, de bout en bout, dans un vrai navigateur.
  *
- * Reproduit ce que fait un gérant seul devant son écran : créer le salon,
- * remplir le catalogue, déclarer l'équipe et les horaires, puis saisir un
- * rendez-vous pris au téléphone. C'est le chemin dont dépend l'adoption côté
- * professionnel — s'il casse, aucun salon ne s'inscrit.
+ * Reproduit ce que fait un gérant devant son écran : remplir le catalogue,
+ * déclarer l'équipe et les horaires, puis saisir un rendez-vous pris au
+ * téléphone. C'est le chemin dont dépend l'adoption côté professionnel.
+ *
+ * La fiche du salon, elle, n'est pas créée ici : dans ce modèle c'est
+ * l'équipe qui référence l'établissement pour le compte du gérant. Le script
+ * la met donc en place par la route d'administration, comme le ferait un
+ * conseiller, puis rend la main au gérant.
  *
  * Suppose la stack démarrée (docker compose, API sur 8080, Vite sur 5173).
  *
@@ -19,6 +23,56 @@ const IDENTIFIANT = process.env.TEST_PRO ?? 'pro1'
 const MOT_DE_PASSE = process.env.TEST_PRO_PASSWORD ?? 'pro1'
 const ok = (c) => (c ? '✅' : '❌')
 const NOM_SALON = `Atlas Barber ${Date.now().toString().slice(-5)}`
+const API = process.env.API_URL ?? 'http://localhost:8080'
+const KC = process.env.KC_URL ?? 'http://localhost:8081'
+
+/* ------------------------------------------------------------------ *
+ * Préparation : un conseiller référence le salon pour ce gérant.
+ * ------------------------------------------------------------------ */
+const jeton = async (identifiant) => {
+  const r = await fetch(`${KC}/realms/booking-realm/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: 'booking-app', username: identifiant, password: identifiant,
+      grant_type: 'password',
+    }),
+  })
+  if (!r.ok) throw new Error(`authentification ${identifiant} impossible (${r.status})`)
+  return (await r.json()).access_token
+}
+
+// Le compte du gérant existe déjà (données de démonstration) : le
+// référencement le retrouve par son adresse plutôt que d'en créer un second.
+// Le salon reste EN_ATTENTE, pour vérifier qu'il se paramètre avant validation.
+const referencer = async () => {
+  const admin = await jeton('admin')
+  const r = await fetch(`${API}/api/admin/salons`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${admin}` },
+    body: JSON.stringify({
+      salon: {
+        nom: NOM_SALON, ville: 'Casablanca', quartier: 'Maarif',
+        adresse: '8 Rue Al Massira', telephone: '0655443322', categorie: 'BARBIER',
+        delaiAnnulationHeures: 24,
+      },
+      proprietaire: {
+        prenom: 'Karim', nom: 'Benali', email: `${IDENTIFIANT}@booking.ma`,
+        telephone: '0655443322',
+      },
+      validerImmediatement: false,
+    }),
+  })
+  const corps = await r.json().catch(() => null)
+  if (!r.ok) throw new Error(`référencement impossible : ${r.status} ${JSON.stringify(corps)}`)
+  return corps
+}
+
+const reference = await referencer()
+console.log('─── Préparation ────────────────────────────────────')
+console.log(`   ${NOM_SALON} référencé pour ${reference.emailProprietaire}`
+  + ` (compte ${reference.compteCree ? 'créé' : 'réutilisé'})`)
+console.log()
 
 const browser = await puppeteer.launch({
   executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu'],
@@ -111,19 +165,15 @@ await Promise.all([
 ])
 console.log(' ', ok(await attendre('Mes salons')), 'tableau de bord accessible')
 
-console.log('\n─── Création du salon ──────────────────────────────')
-await clic('Ajouter un salon')
-await attendre('Nouveau salon')
-await saisir('Nom du salon', NOM_SALON)
-await saisir('Ville', 'Casablanca')
-await saisir('Adresse', '8 Rue Al Massira')
-await saisir('Quartier', 'Maarif')
-await saisir('Téléphone', '0655443322')
-await saisir('Catégorie', 'BARBIER')
-await clic('Créer le salon')
-console.log(' ', ok(await attendre(NOM_SALON)), 'salon créé')
+console.log('\n─── Le salon référencé pour lui ────────────────────')
+console.log(' ', ok(await attendre(NOM_SALON)), 'le gérant trouve son salon déjà en place')
 console.log(' ', ok(await attendre('En attente de validation')),
-  'créé EN_ATTENTE — invisible du public tant qu\'il n\'est pas validé')
+  'EN_ATTENTE — invisible du public tant qu\'il n\'est pas validé')
+// Un compte professionnel n'a pas le droit de créer un établissement : cette
+// route est réservée à l'administration, et l'interface ne la propose pas.
+const creationRefusee = await page.evaluate(() =>
+  ![...document.querySelectorAll('button, a')].some((e) => /ajouter un salon/i.test(e.innerText)))
+console.log(' ', ok(creationRefusee), 'aucune création d\'établissement proposée au gérant')
 
 console.log('\n─── Catalogue, depuis un modèle métier ─────────────')
 await clic(NOM_SALON)
