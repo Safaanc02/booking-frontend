@@ -27,11 +27,20 @@
 		reverse_proxy keycloak:8080
 	}
 
-	# Serveur de messagerie de test : il capture les envois sans les livrer.
-	# Indispensable pour suivre une invitation de gérant de bout en bout.
-	handle /courrier* {
-		reverse_proxy mailpit:8025
-	}
+	# Routes facultatives, ajoutées par montage.
+	#
+	# La boîte aux lettres de test se branche ainsi : docker-compose.demo.yml
+	# monte le fragment qui l'expose sous /courrier. Sans ce montage, la route
+	# n'existe pas du tout — elle n'est pas seulement fermée.
+	#
+	# C'est voulu : cette boîte contient les liens d'invitation des gérants,
+	# donc quiconque y accède prend la main sur un compte professionnel. Une
+	# route qu'on peut oublier de fermer finit par rester ouverte ; celle-ci
+	# demande un geste pour exister.
+	#
+	# Le joker rend l'import facultatif : Caddy valide la configuration avec
+	# ou sans fichier correspondant.
+	import /etc/caddy/optionnel-*.caddy
 
 	# Le site. try_files renvoie index.html pour toute adresse qui ne
 	# correspond à aucun fichier : le routage se fait dans le navigateur, et
