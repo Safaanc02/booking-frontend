@@ -4,7 +4,8 @@ import { publicApi } from "../api/bookingApi"
 import SearchBar from "../components/SearchBar"
 import SalonCard from "../components/SalonCard"
 import { NoteResume } from "../components/Etoiles"
-import { TrameZellige, EtoileHuit } from "../components/Motifs"
+import { TrameZellige, EtoileHuit, FriseZellige } from "../components/Motifs"
+import Arche, { ArcheTrait } from "../components/Arche"
 import {
   Coiffure, Barbier, Onglerie, Esthetique, Hammam,
   Horloge, Etiquette, Rappel,
@@ -22,17 +23,32 @@ const OUVERTURE = [9, 19]
  * JSX, et un composant rangé dans un tableau passerait pour inutilisé.
  */
 const METIERS = [
-  { cle: "coiffure",   libelle: "Coiffure",     detail: "Coupe, couleur, coiffage" },
-  { cle: "barbier",    libelle: "Barbier",      detail: "Coupe homme, barbe" },
-  { cle: "onglerie",   libelle: "Onglerie",     detail: "Manucure, pose" },
-  { cle: "esthetique", libelle: "Esthétique",   detail: "Soins, épilation" },
-  { cle: "hammam",     libelle: "Hammam & spa", detail: "Gommage, massage" },
+  { cle: "COIFFURE",   libelle: "Coiffure",     detail: "Coupe, couleur, coiffage" },
+  { cle: "BARBIER",    libelle: "Barbier",      detail: "Coupe homme, barbe" },
+  { cle: "ONGLERIE",   libelle: "Onglerie",     detail: "Manucure, pose" },
+  { cle: "ESTHETIQUE", libelle: "Esthétique",   detail: "Soins, épilation" },
+  { cle: "SPA",        libelle: "Hammam & spa", detail: "Gommage, massage" },
 ]
 
 const GLYPHES = {
-  coiffure: Coiffure, barbier: Barbier, onglerie: Onglerie,
-  esthetique: Esthetique, hammam: Hammam,
+  COIFFURE: Coiffure, BARBIER: Barbier, ONGLERIE: Onglerie,
+  ESTHETIQUE: Esthetique, SPA: Hammam,
   horloge: Horloge, etiquette: Etiquette, rappel: Rappel,
+}
+
+/**
+ * Dégradés des tuiles de métier.
+ *
+ * Mêmes teintes que l'identité des salons : un visiteur qui clique sur la
+ * tuile bordeaux « Coiffure » retrouve des cartes bordeaux dans les
+ * résultats. La cohérence n'est pas décorative, elle confirme le geste.
+ */
+const DEGRADES = {
+  COIFFURE: "linear-gradient(150deg, #6f2837, #c2566a)",
+  BARBIER: "linear-gradient(150deg, #1c1917, #57534e)",
+  ONGLERIE: "linear-gradient(150deg, #7d2d4a, #d98693)",
+  ESTHETIQUE: "linear-gradient(150deg, #326358, #6fa79a)",
+  SPA: "linear-gradient(150deg, #6d3a20, #c08552)",
 }
 
 /** Ce que la réservation en ligne change, du point de vue du client. */
@@ -86,10 +102,10 @@ function Accroche() {
   const ferme = maintenant.h < OUVERTURE[0] || maintenant.h >= OUVERTURE[1]
 
   return (
-    <p className="inline-flex items-center gap-2.5 rounded-full bg-white/70 py-1.5 pl-2.5 pr-4 text-[13px] text-stone-600 ring-1 ring-stone-200/80 backdrop-blur">
-      <Horloge className="h-4 w-4 shrink-0 text-brand-600" />
+    <p className="inline-flex items-center gap-2.5 rounded-full bg-white/10 py-1.5 pl-2.5 pr-4 text-[13px] text-brand-100 ring-1 ring-white/20 backdrop-blur">
+      <Horloge className="h-4 w-4 shrink-0 text-brand-200" />
       <span>
-        <span className="font-semibold tabular-nums text-stone-900">{maintenant.heure}</span>
+        <span className="font-semibold tabular-nums text-white">{maintenant.heure}</span>
         {" à Casablanca — "}
         {ferme ? "les salons sont fermés, la réservation non." : "réservez sans décrocher."}
       </span>
@@ -249,49 +265,53 @@ export default function Home() {
     <div>
       {/* ---------------------------------------------------------------- */}
       {/* Bandeau d'entrée                                                 */}
+      {/*                                                                  */}
+      {/* Pleine surface bordeaux, et non un dégradé pâle. La version       */}
+      {/* précédente posait du texte sombre sur un fond presque blanc :     */}
+      {/* correct, et impossible à distinguer de n'importe quelle           */}
+      {/* application. Une page d'accueil doit décider d'une couleur.       */}
       {/* ---------------------------------------------------------------- */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-brand-50 via-brand-50/40 to-stone-50">
-        {/* Le motif habille les marges hautes et s'efface avant d'atteindre le
-            titre : une trame sous un texte de cette taille se lit comme du
-            bruit, et c'est le titre qui doit gagner. */}
+      <section className="relative isolate overflow-hidden bg-brand-800">
+        {/* Le motif est ici assumé, pas suggéré : il couvre tout le bandeau
+            et ne s'efface que sous le titre, où il gênerait la lecture. */}
         <TrameZellige
           id="trame-accueil"
-          className="pointer-events-none absolute inset-0 h-full w-full text-brand-500/30"
-          style={{
-            maskImage: "radial-gradient(90% 55% at 50% -10%, #000 0%, transparent 75%)",
-            WebkitMaskImage: "radial-gradient(90% 55% at 50% -10%, #000 0%, transparent 75%)",
-          }}
+          taille={72}
+          className="pointer-events-none absolute inset-0 h-full w-full text-white/[0.13]"
+        />
+        {/* Halo chaud dans l'angle : évite l'aplat monotone sur grand écran. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-40 -top-40 h-[36rem] w-[36rem] rounded-full opacity-40 blur-3xl"
+          style={{ background: "radial-gradient(circle, #c2566a 0%, transparent 70%)" }}
         />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-12 pt-14 lg:grid-cols-[1.15fr_minmax(0,0.85fr)] lg:gap-14 lg:pb-14 lg:pt-20">
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-12 lg:grid-cols-[1.1fr_minmax(0,0.9fr)] lg:gap-16 lg:pb-20 lg:pt-16">
           <div>
             <Accroche />
 
-            {/* whitespace-nowrap sur « rendez-vous » : sans lui, la césure
-                tombait sur le trait d'union et coupait le mot en deux lignes,
-                au beau milieu du titre. */}
-            <h1 className="mt-6 text-4xl font-bold leading-[1.08] tracking-tight text-stone-900 sm:text-5xl">
+            <h1 className="mt-6 text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-[3.6rem]">
               Votre prochain <span className="whitespace-nowrap">rendez-vous</span>,
-              <span className="block text-brand-700">sans un seul appel.</span>
+              <span className="mt-1 block text-brand-200">sans un seul appel.</span>
             </h1>
 
-            <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-stone-600">
+            <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-brand-100/90">
               Coiffure, barbier, onglerie, hammam. Comparez les prix, choisissez
               votre praticien, prenez le créneau qui vous arrange — et changez
               d’avis jusqu’à la veille.
             </p>
 
-            <div className="mt-8 max-w-2xl">
+            <div className="mt-9 max-w-2xl">
               <SearchBar variante="hero" villes={reseau.villes} />
             </div>
 
             {reseau.total > 0 && (
-              <p className="mt-5 text-sm text-stone-500">
-                <strong className="font-semibold text-stone-900">{reseau.total}</strong>
+              <p className="mt-5 text-sm text-brand-100/80">
+                <strong className="font-semibold text-white">{reseau.total}</strong>
                 {reseau.total > 1 ? " salons" : " salon"} dans{" "}
-                <strong className="font-semibold text-stone-900">{reseau.villes.length}</strong>
+                <strong className="font-semibold text-white">{reseau.villes.length}</strong>
                 {reseau.villes.length > 1 ? " villes" : " ville"}
-                <span aria-hidden className="mx-3 inline-block h-3 w-px translate-y-px bg-stone-300" />
+                <span aria-hidden className="mx-3 inline-block h-3 w-px translate-y-px bg-white/30" />
                 Gratuit, sans compte pour chercher
               </p>
             )}
@@ -301,65 +321,95 @@ export default function Home() {
             <ApercuCreneaux salon={vedette} />
           </div>
         </div>
+
+        {/* Frise en bas de bandeau : la coupure est franche, et le motif y
+            sert de ponctuation au lieu d'un filet gris. */}
+        <FriseZellige id="frise-hero" hauteur="h-5" className="text-white/25" />
       </section>
 
       {/* ---------------------------------------------------------------- */}
-      {/* Métiers                                                          */}
+      {/* Métiers, en colonnade                                            */}
+      {/*                                                                  */}
+      {/* Une rangée d'arches, comme une cour de riad. La mosaïque          */}
+      {/* asymétrique essayée d'abord ne tenait pas : l'arche exige des     */}
+      {/* proportions en hauteur, et sur des tuiles larges la découpe       */}
+      {/* rognait les libellés. Le texte passe donc sous l'arche, hors du   */}
+      {/* masque, où rien ne peut le couper.                                */}
       {/* ---------------------------------------------------------------- */}
-      <section className="mx-auto max-w-6xl px-4 pb-14 pt-12">
+      <section className="mx-auto max-w-6xl px-4 pb-16 pt-14">
         <TitreSection
           titre="Par métier"
           complement="Cinq familles de prestations, du hammam à la couleur."
         />
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-5 lg:gap-x-5">
           {METIERS.map(({ cle, libelle, detail }) => {
             const Glyphe = GLYPHES[cle]
             return (
-            <Link
-              key={cle}
-              to={`/recherche?q=${encodeURIComponent(libelle)}`}
-              className="group relative overflow-hidden rounded-2xl bg-white p-5 ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand-900/5 hover:ring-brand-300"
-            >
-              {/* Le motif n'apparaît qu'au survol : la grille reste calme au
-                  repos, et le geste est récompensé. */}
-              <TrameZellige
-                id={`trame-${cle}`}
-                taille={40}
-                className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 text-brand-400 opacity-0 transition-opacity duration-300 group-hover:opacity-60"
-              />
-              <Glyphe className="relative h-8 w-8 text-brand-600 transition-transform duration-300 group-hover:scale-110" />
-              <p className="relative mt-4 font-semibold text-stone-900">{libelle}</p>
-              <p className="relative mt-0.5 text-xs text-stone-500">{detail}</p>
-            </Link>
+              <li key={cle}>
+                <Link to={`/recherche?metier=${cle}`} className="group block">
+                  <div className="relative isolate aspect-[3/4] transition duration-300 group-hover:-translate-y-1.5">
+                    <Arche className="absolute inset-0" style={{ background: DEGRADES[cle] }} />
+                    <TrameZellige
+                      id={`trame-${cle}`}
+                      taille={34}
+                      className="pointer-events-none absolute inset-0 h-full w-full text-white/25 transition-colors duration-300 group-hover:text-white/40"
+                      style={{ clipPath: "url(#arche)" }}
+                    />
+                    {/* Le pictogramme est centré dans le dôme, où l'arche est
+                        la plus large : plus bas, la découpe le pincerait. */}
+                    <Glyphe className="absolute left-1/2 top-[38%] h-9 w-9 -translate-x-1/2 -translate-y-1/2 text-white/95 transition-transform duration-300 group-hover:scale-110" />
+                  </div>
+                  <p className="mt-3 text-center font-semibold text-stone-900 transition group-hover:text-brand-700">
+                    {libelle}
+                  </p>
+                  <p className="mt-0.5 text-center text-xs text-stone-500">{detail}</p>
+                </Link>
+              </li>
             )
           })}
-        </div>
+        </ul>
       </section>
 
       {/* ---------------------------------------------------------------- */}
       {/* Villes couvertes                                                 */}
+      {/*                                                                  */}
+      {/* Sur une bande sable, et en grand. Toute la page se déroulait sur  */}
+      {/* le même ivoire : sans alternance de surfaces, les sections se     */}
+      {/* succèdent sans qu'on sente où l'une finit. Les villes s'écrivent  */}
+      {/* dans la police d'affichage — ce sont des noms de lieux, pas des    */}
+      {/* étiquettes de filtre.                                             */}
       {/* ---------------------------------------------------------------- */}
       {reseau.villes.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 pb-14">
-          <TitreSection
-            titre="Où nous sommes"
-            complement="Le réseau s’étend ville par ville, salon par salon."
+        <section className="relative isolate overflow-hidden border-y border-stone-200/70 bg-sable">
+          <TrameZellige
+            id="trame-villes"
+            taille={64}
+            className="pointer-events-none absolute inset-0 h-full w-full text-brand-600/[0.06]"
           />
-          <div className="mt-5 flex flex-wrap gap-2.5">
-            {reseau.villes.map((ville) => (
-              <Link
-                key={ville}
-                to={`/recherche?ville=${encodeURIComponent(ville)}`}
-                className="group inline-flex items-baseline gap-2 rounded-full bg-white px-4 py-2.5 text-sm ring-1 ring-stone-200 transition hover:bg-brand-600 hover:ring-brand-600"
-              >
-                <span className="font-medium text-stone-800 group-hover:text-white">{ville}</span>
-                {reseau.complet && (
-                  <span className="rounded-full bg-stone-100 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-stone-500 group-hover:bg-brand-700 group-hover:text-brand-100">
-                    {parVille(ville)}
-                  </span>
-                )}
-              </Link>
-            ))}
+          <div className="relative mx-auto max-w-6xl px-4 py-14">
+            <TitreSection
+              titre="Où nous sommes"
+              complement="Le réseau s’étend ville par ville, salon par salon."
+            />
+            <ul className="mt-7 flex flex-wrap items-baseline gap-x-8 gap-y-4 sm:gap-x-12">
+              {reseau.villes.map((ville) => (
+                <li key={ville}>
+                  <Link
+                    to={`/recherche?ville=${encodeURIComponent(ville)}`}
+                    className="group inline-flex items-baseline gap-2"
+                  >
+                    <span className="font-titre text-2xl font-semibold text-stone-900 decoration-brand-400 decoration-2 underline-offset-[6px] transition group-hover:text-brand-700 group-hover:underline sm:text-3xl">
+                      {ville}
+                    </span>
+                    {reseau.complet && (
+                      <span className="text-sm tabular-nums text-stone-400 transition group-hover:text-brand-500">
+                        {parVille(ville)}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
       )}
@@ -368,7 +418,7 @@ export default function Home() {
       {/* Salons mis en avant                                              */}
       {/* ---------------------------------------------------------------- */}
       {mieuxNotes.length >= 2 && (
-        <section className="mx-auto max-w-6xl px-4 pb-14">
+        <section className="mx-auto max-w-6xl px-4 py-14">
           <TitreSection
             titre="Les mieux notés"
             complement="Notes déposées par des clients dont le rendez-vous a été honoré."
@@ -383,19 +433,31 @@ export default function Home() {
 
       {/* ---------------------------------------------------------------- */}
       {/* Ce que ça change                                                 */}
+      {/*                                                                  */}
+      {/* Les pictogrammes sont posés dans une petite arche teintée : trois */}
+      {/* traits nus sur du blanc ne retenaient pas l'œil, et la forme      */}
+      {/* rappelle la colonnade des métiers plus haut.                      */}
       {/* ---------------------------------------------------------------- */}
-      <section className="mx-auto max-w-6xl px-4 pb-16">
-        <div className="grid gap-px overflow-hidden rounded-3xl bg-stone-200 sm:grid-cols-3">
-          {PROMESSES.map(({ glyphe, titre, texte }) => {
-            const Glyphe = GLYPHES[glyphe]
-            return (
-              <div key={titre} className="bg-white p-7">
-                <Glyphe className="h-6 w-6 text-brand-600" />
-                <p className="mt-4 font-semibold text-stone-900">{titre}</p>
-                <p className="mt-1.5 text-sm leading-relaxed text-stone-600">{texte}</p>
-              </div>
-            )
-          })}
+      <section className="border-y border-stone-200/70 bg-sable">
+        <div className="mx-auto max-w-6xl px-4 py-14">
+          <div className="grid gap-8 sm:grid-cols-3 sm:gap-10">
+            {PROMESSES.map(({ glyphe, titre, texte }) => {
+              const Glyphe = GLYPHES[glyphe]
+              return (
+                <div key={titre}>
+                  <div className="relative isolate h-14 w-11">
+                    <Arche
+                      className="absolute inset-0"
+                      style={{ background: "linear-gradient(150deg, #8b3244, #c2566a)" }}
+                    />
+                    <Glyphe className="absolute left-1/2 top-[42%] h-5 w-5 -translate-x-1/2 -translate-y-1/2 text-white" />
+                  </div>
+                  <p className="mt-4 font-titre text-lg font-semibold text-stone-900">{titre}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-stone-600">{texte}</p>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </section>
 

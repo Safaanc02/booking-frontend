@@ -64,3 +64,22 @@ export function EtoileHuit({ className = "" }) {
     </svg>
   )
 }
+
+/**
+ * Bandeau de zellige, en séparation de sections.
+ *
+ * Une frise de quelques pixels qui coupe la page franchement, au lieu du
+ * filet gris habituel. C'est le motif employé comme ponctuation : il donne
+ * un rythme là où les sections se succédaient sans transition.
+ */
+export function FriseZellige({ id, className = "", hauteur = "h-6" }) {
+  return (
+    <div className={`relative overflow-hidden ${hauteur} ${className}`}>
+      <TrameZellige
+        id={id}
+        taille={24}
+        className="absolute inset-0 h-full w-full"
+      />
+    </div>
+  )
+}

@@ -163,17 +163,32 @@ console.log()
 console.log('─── Les chemins proposés ───────────────────────────')
 const liens = await page.evaluate(() =>
   [...document.querySelectorAll('a')].map((a) => a.getAttribute('href')))
-dire(liens.filter((l) => l?.startsWith('/recherche?q=')).length === 5,
-  'les cinq métiers filtrent la recherche')
+/*
+ * Les métiers filtrent par catégorie, non par mot-clé.
+ *
+ * Ils pointaient vers /recherche?q=Coiffure, une recherche textuelle qui
+ * tombait juste par coïncidence de vocabulaire — « Hammam & spa » ne
+ * correspondait à rien. Ils désignent maintenant la catégorie du salon.
+ */
+dire(liens.filter((l) => l?.startsWith('/recherche?metier=')).length === 5,
+  'les cinq métiers filtrent la recherche par catégorie')
 dire(villes.every((v) => liens.includes(`/recherche?ville=${encodeURIComponent(v)}`)),
   'chaque ville filtre la recherche')
 dire(liens.includes('/professionnels'), 'l\'entrée professionnelle est proposée')
 
 await page.evaluate(() => [...document.querySelectorAll('a')]
-  .find((a) => a.getAttribute('href')?.startsWith('/recherche?q='))?.click())
-await pause(1500)
-dire(page.url().includes('/recherche?q='),
+  .find((a) => a.getAttribute('href')?.startsWith('/recherche?metier='))?.click())
+await pause(2000)
+dire(page.url().includes('/recherche?metier='),
   `un métier ouvre bien la recherche filtrée (${page.url().replace(BASE, '')}`.concat(')'))
+// Le filtre doit réellement mener à des résultats, pas seulement figurer
+// dans l'URL. Cette suite n'a pas d'aide d'attente : on boucle sur le texte.
+let resultats = false
+for (let i = 0; i < 40 && !resultats; i++) {
+  resultats = contient(await txt(), 'salon')
+  if (!resultats) await pause(200)
+}
+dire(resultats, 'la page de résultats répond au filtre')
 
 /* ------------------------------------------------------------------ *
  * 4. Tenue sur trois largeurs.
