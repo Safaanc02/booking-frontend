@@ -213,13 +213,25 @@ function ApercuCreneaux({ salon }) {
         </span>
       </div>
 
-      {/* La date hégirienne en second : pendant le Ramadan, c'est le repère
-          que les clients ont en tête, et les horaires des salons s'y
-          décalent entièrement. */}
-      <p className="mt-4 text-xs font-medium text-stone-400">
+      {/*
+        La date hégirienne en second : pendant le Ramadan, c'est le repère que
+        les clients ont en tête, et les horaires des salons s'y décalent
+        entièrement.
+
+        En second, non effacée. Écrite d'abord en stone-300 sur blanc — moins
+        de 2:1 de contraste — elle passait pour absente, au point qu'on m'a
+        demandé pourquoi je l'avais retirée. Une mention discrète doit rester
+        lisible : sinon elle n'informe personne tout en occupant la place.
+
+        Cette ligne dit à quel jour se rapportent les créneaux en dessous :
+        c'est une information, pas une décoration. La hiérarchie entre les deux
+        dates passe donc par la graisse et non par le contraste — à 12 px,
+        stone-400 tombe à 2,5:1 sur blanc, sous le seuil de lisibilité.
+      */}
+      <p className="mt-4 text-xs font-medium text-stone-500">
         {jourLong(apercu.date)}
         {dateHijri(apercu.date) && (
-          <span className="text-stone-300"> · {dateHijri(apercu.date)}</span>
+          <span className="font-normal text-stone-500"> · {dateHijri(apercu.date)}</span>
         )}
       </p>
       <div className="mt-2 grid grid-cols-4 gap-2">
