@@ -3,8 +3,10 @@ import { adminApi } from "../../api/bookingApi"
 import { telephone } from "../../lib/format"
 import Loader, { EmptyState, ErrorState } from "../../components/Loader"
 import ReferencerSalon from "./ReferencerSalon"
+import AdminDemandes from "./AdminDemandes"
 
 const ONGLETS = [
+  ["DEMANDES", "Demandes"],
   ["REFERENCER", "Référencer"],
   ["EN_ATTENTE", "À valider"],
   ["ACTIF", "En ligne"],
@@ -19,8 +21,12 @@ const ONGLETS = [
  * validation, sans laquelle un salon ne devient jamais visible.
  */
 export default function AdminSalons() {
-  const [onglet, setOnglet] = useState("REFERENCER")
-  const statut = onglet === "REFERENCER" ? null : onglet
+  const [onglet, setOnglet] = useState("DEMANDES")
+  const [nouvelles, setNouvelles] = useState(null)
+  /** Demande servant de point de départ au référencement, le cas échéant. */
+  const [depuis, setDepuis] = useState(null)
+  // Seuls les onglets de la file des salons portent un statut de salon.
+  const statut = onglet === "REFERENCER" || onglet === "DEMANDES" ? null : onglet
   const [etat, setEtat] = useState({ statut: "chargement", data: [], erreur: null })
   const [action, setAction] = useState({ id: null, erreur: null })
 
@@ -35,6 +41,12 @@ export default function AdminSalons() {
 
   useEffect(charger, [charger])
 
+  // La pastille est chargée à part : elle doit rester juste même quand on
+  // consulte un autre onglet, et une demande traitée ailleurs la fait baisser.
+  useEffect(() => {
+    adminApi.nouvellesDemandes().then(setNouvelles).catch(() => setNouvelles(null))
+  }, [onglet])
+
   const changer = (id, nouveau) => {
     setAction({ id, erreur: null })
     adminApi
@@ -45,16 +57,21 @@ export default function AdminSalons() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-stone-900">Administration des salons</h1>
+      <h1 className="text-2xl font-bold text-stone-900">Administration</h1>
       <p className="mt-1 text-sm text-stone-500">
-        Un salon n'apparaît dans la recherche qu'une fois validé.
+        Des demandes reçues jusqu'à la mise en ligne des salons.
       </p>
 
       <nav className="mt-5 flex gap-1 border-b border-stone-200">
         {ONGLETS.map(([cle, libelle]) => (
           <button
             key={cle}
-            onClick={() => setOnglet(cle)}
+            onClick={() => {
+              // Revenir sur l'onglet de référencement par le menu repart d'un
+              // formulaire vide : la demande précédente n'a plus lieu d'être.
+              if (cle === "REFERENCER") setDepuis(null)
+              setOnglet(cle)
+            }}
             className={`border-b-2 px-4 py-2.5 text-sm transition ${
               onglet === cle
                 ? "border-brand-600 font-semibold text-brand-700"
@@ -62,6 +79,11 @@ export default function AdminSalons() {
             }`}
           >
             {libelle}
+            {cle === "DEMANDES" && nouvelles > 0 && (
+              <span className="ml-2 rounded-full bg-brand-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+                {nouvelles}
+              </span>
+            )}
           </button>
         ))}
       </nav>
@@ -73,7 +95,16 @@ export default function AdminSalons() {
       )}
 
       <div className="mt-6">
-        {!statut && <ReferencerSalon />}
+        {onglet === "DEMANDES" && (
+          <AdminDemandes
+            onReferencer={(demande) => { setDepuis(demande); setOnglet("REFERENCER") }}
+          />
+        )}
+        {/* La clé force un formulaire neuf quand la demande de départ change :
+            sans elle, l'état initial du précédent survivrait. */}
+        {onglet === "REFERENCER" && (
+          <ReferencerSalon key={depuis?.id ?? "vierge"} demande={depuis} />
+        )}
 
         {statut && etat.statut === "chargement" && <Loader />}
         {statut && etat.statut === "erreur" && (

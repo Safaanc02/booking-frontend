@@ -16,6 +16,14 @@ export default function Header() {
 
         <nav className="flex items-center gap-5">
           <NavLink to="/recherche" className={lien}>Salons</NavLink>
+          {/* L'entrée professionnelle ne s'affiche qu'à qui n'en a pas déjà une :
+              proposer « Vous êtes un salon ? » à un gérant connecté est absurde. */}
+          {!hasRole("pro") && !hasRole("admin") && (
+            <NavLink to="/professionnels" className={lien}>
+              <span className="hidden sm:inline">Vous êtes un salon ?</span>
+              <span className="sm:hidden">Pros</span>
+            </NavLink>
+          )}
           {authenticated && <NavLink to="/compte" className={lien}>Mes réservations</NavLink>}
           {hasRole("pro") && <NavLink to="/mon-planning" className={lien}>Mon planning</NavLink>}
           {hasRole("pro") && <NavLink to="/pro" className={lien}>Mon salon</NavLink>}

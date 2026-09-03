@@ -123,8 +123,13 @@ await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle0' })
 await clic('Se connecter')
 await connecter('admin', 'admin')
 
+// L'administration ouvre sur la file des demandes : on travaille ce qui
+// attend avant d'installer. Le référencement direct — démarchage sans demande
+// préalable — est l'onglet voisin.
+dire(await attendre('Demandes'), 'l\'administration ouvre sur la file des demandes')
+await clic('Référencer')
 dire(await attendre('Référencer un salon'),
-  'le référencement est l\'écran d\'entrée de l\'administration')
+  'le référencement direct reste accessible, pour un salon démarché')
 dire(contient(await txt(), 'choisir son mot de passe'),
   'l\'écran annonce que le gérant définira son mot de passe lui-même')
 

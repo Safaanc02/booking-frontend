@@ -39,6 +39,17 @@ export const publicApi = {
     client.get(`/api/public/salons/${salonId}/avis`, { params: { page, size } }).then((r) => r.data),
 }
 
+/**
+ * Prise de contact d'un professionnel.
+ *
+ * Route publique et sans compte : dans ce modèle, un salon ne s'inscrit pas,
+ * il est installé par l'équipe. Ce formulaire remplit la file commerciale.
+ */
+export const proprietairesApi = {
+  demanderDemo: (payload) =>
+    client.post("/api/public/demandes-demo", payload).then((r) => r.data),
+}
+
 /** Annulation depuis un email : aucun jeton d'authentification, un lien signé. */
 export const annulationApi = {
   apercu: (token) =>
@@ -117,6 +128,16 @@ export const adminApi = {
    */
   referencerSalon: (payload) =>
     client.post("/api/admin/salons", payload).then((r) => r.data),
+
+  /** File commerciale. `statut` : NOUVELLE, CONTACTEE, QUALIFIEE, CONVERTIE, PERDUE. */
+  demandes: (statut = "NOUVELLE", page = 0) =>
+    client.get("/api/admin/demandes-demo", { params: { statut, page, size: 50 } })
+      .then((r) => r.data),
+  nouvellesDemandes: () =>
+    client.get("/api/admin/demandes-demo/nouvelles").then((r) => r.data),
+  traiterDemande: (id, statut, note) =>
+    client.patch(`/api/admin/demandes-demo/${id}`, null, { params: { statut, note } })
+      .then((r) => r.data),
 
   avis: (statut = "PUBLIE", page = 0) =>
     client.get("/api/admin/avis", { params: { statut, page, size: 50 } }).then((r) => r.data),

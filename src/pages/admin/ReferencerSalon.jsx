@@ -15,6 +15,32 @@ const VIDE = {
 }
 
 /**
+ * Le métier déclaré par le prospect n'est pas celui du catalogue.
+ *
+ * « Hammam & spa » se range sous SPA, et AUTRE n'a pas d'équivalent — on
+ * retombe alors sur COIFFURE, que le conseiller corrige. Mieux vaut un choix
+ * à revoir qu'un champ vide au milieu du formulaire.
+ */
+const CATEGORIE_POUR = {
+  COIFFURE: "COIFFURE", BARBIER: "BARBIER", ONGLERIE: "ONGLERIE",
+  ESTHETIQUE: "ESTHETIQUE", SPA_HAMMAM: "SPA",
+}
+
+/** Reprend ce que la demande a déjà recueilli. L'adresse reste à saisir. */
+const depuisDemande = (d) => !d ? VIDE : {
+  ...VIDE,
+  nom: d.nomEtablissement ?? "",
+  ville: d.ville ?? "",
+  quartier: d.quartier ?? "",
+  telephone: d.telephone ?? "",
+  categorie: CATEGORIE_POUR[d.typeEtablissement] ?? "COIFFURE",
+  gerantPrenom: d.prenom ?? "",
+  gerantNom: d.nom ?? "",
+  gerantEmail: d.email ?? "",
+  gerantTelephone: d.telephone ?? "",
+}
+
+/**
  * Référencement d'un salon par l'équipe, pour le compte d'un gérant.
  *
  * C'est le modèle du métier : le salon ne s'inscrit pas seul. Le paramétrage
@@ -22,8 +48,8 @@ const VIDE = {
  * épargner est la meilleure garantie qu'il reste. Le gérant reçoit un lien
  * pour choisir son mot de passe — jamais un mot de passe en clair.
  */
-export default function ReferencerSalon() {
-  const [form, setForm] = useState(VIDE)
+export default function ReferencerSalon({ demande }) {
+  const [form, setForm] = useState(() => depuisDemande(demande))
   const [envoi, setEnvoi] = useState({ enCours: false, erreur: null })
   const [resultat, setResultat] = useState(null)
 
@@ -63,6 +89,13 @@ export default function ReferencerSalon() {
         Le compte du gérant est créé, et il reçoit un e-mail pour choisir son mot de passe.
         Vous pourrez ensuite paramétrer son catalogue et ses horaires à sa place.
       </p>
+
+      {demande && (
+        <p className="mt-4 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-900 ring-1 ring-brand-200">
+          Prérempli depuis la demande de {demande.prenom} {demande.nom}. Il reste
+          l’adresse exacte à renseigner — et la demande sera marquée convertie.
+        </p>
+      )}
 
       {/* Une invitation non partie n'annule pas le référencement, mais le gérant
           ne peut pas se connecter : l'écran doit le dire, pas l'enterrer. */}

@@ -11,6 +11,7 @@ import ProDashboard from "./pages/pro/ProDashboard"
 import ProSalon from "./pages/pro/ProSalon"
 import MonPlanning from "./pages/pro/MonPlanning"
 import AdminSalons from "./pages/admin/AdminSalons"
+import Professionnels from "./pages/Professionnels"
 import Account from "./pages/Account"
 import Legal from "./pages/Legal"
 import NotFound from "./pages/NotFound"
@@ -28,6 +29,8 @@ export default function App() {
               <Route path="/salon/:id" element={<SalonDetails />} />
               <Route path="/salon/:id/reserver" element={<Reservation />} />
               <Route path="/compte" element={<Account />} />
+              {/* Entrée des professionnels : une prise de contact, pas une inscription. */}
+              <Route path="/professionnels" element={<Professionnels />} />
               {/* Accessible sans connexion : le lien signé fait office d'autorisation. */}
               <Route path="/annuler" element={<AnnulationParLien />} />
               <Route path="/pro" element={<RequireRole role="pro"><ProDashboard /></RequireRole>} />
@@ -42,7 +45,12 @@ export default function App() {
           <footer className="border-t border-stone-200 bg-white">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-stone-500">
               <span>© {new Date().getFullYear()} Booking.ma</span>
-              <Link to="/mentions-legales" className="hover:text-stone-800">Mentions légales</Link>
+              <span className="flex gap-4">
+                <Link to="/professionnels" className="hover:text-stone-800">
+                  Vous êtes un salon ?
+                </Link>
+                <Link to="/mentions-legales" className="hover:text-stone-800">Mentions légales</Link>
+              </span>
             </div>
           </footer>
         </div>
