@@ -11,7 +11,7 @@ const VIDE = {
 }
 
 /**
- * Le métier déclaré par le prospect n'est pas celui du catalogue.
+ * Les métiers déclarés par le prospect ne sont pas ceux du catalogue.
  *
  * « Hammam & spa » se range sous SPA, et AUTRE n'a pas d'équivalent — on
  * retombe alors sur COIFFURE, que le conseiller corrige. Mieux vaut un choix
@@ -25,7 +25,16 @@ const CATEGORIE_POUR = {
 /** Reprend ce que la demande a déjà recueilli. L'adresse reste à saisir. */
 const depuisDemande = (d) => {
   if (!d) return VIDE
-  const metier = CATEGORIE_POUR[d.typeEtablissement] ?? "COIFFURE"
+  /*
+   * Tous les métiers de la demande, dédoublonnés.
+   *
+   * Deux types distincts peuvent tomber sur la même catégorie — AUTRE et
+   * COIFFURE, faute d'équivalent — et proposer deux fois la même case ferait
+   * douter d'une erreur.
+   */
+  const declares = d.metiers?.length ? d.metiers : [d.typeEtablissement]
+  const metiers = [...new Set(declares.map((t) => CATEGORIE_POUR[t] ?? "COIFFURE"))]
+  const metier = metiers[0] ?? "COIFFURE"
   return {
   ...VIDE,
   nom: d.nomEtablissement ?? "",
@@ -33,10 +42,10 @@ const depuisDemande = (d) => {
   quartier: d.quartier ?? "",
   telephone: d.telephone ?? "",
   categorie: metier,
-  // Les cases cochées doivent suivre le métier déclaré, pas rester sur la
-  // valeur par défaut : le conseiller décochait « Coiffure » pour cocher
-  // « Esthétique » alors que la demande le disait déjà.
-  metiers: [metier],
+  // Les cases cochées suivent les métiers déclarés, pas la valeur par
+  // défaut : le conseiller décochait « Coiffure » pour cocher ce que la
+  // demande disait déjà.
+  metiers,
   gerantPrenom: d.prenom ?? "",
   gerantNom: d.nom ?? "",
   gerantEmail: d.email ?? "",

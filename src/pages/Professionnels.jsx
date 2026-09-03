@@ -25,7 +25,7 @@ const OUTILS = ["Carnet papier", "Agenda téléphone", "Un autre logiciel", "Rie
 const ETAPES = ["Votre établissement", "Votre activité", "Vous contacter"]
 
 const VIDE = {
-  typeEtablissement: "", nomEtablissement: "", ville: "", quartier: "", specialite: "",
+  metiers: [], nomEtablissement: "", ville: "", quartier: "", specialite: "",
   anciennete: "", nombreCollaborateurs: "", proprietaireLocal: "", outilActuel: "",
   prenom: "", nom: "", telephone: "", email: "", ice: "", message: "",
 }
@@ -51,12 +51,19 @@ export default function Professionnels() {
 
   const maj = (cle) => (e) => setForm({ ...form, [cle]: e.target.value })
   const poser = (cle, valeur) => setForm({ ...form, [cle]: valeur })
+
+  const basculerMetier = (valeur) => setForm({
+    ...form,
+    metiers: form.metiers.includes(valeur)
+      ? form.metiers.filter((m) => m !== valeur)
+      : [...form.metiers, valeur],
+  })
   const champs = envoi.erreur?.details ?? {}
 
   /* Chaque étape garde ses propres conditions : on ne laisse pas avancer vers
      un envoi que le serveur refusera de toute façon. */
   const etapeValide = [
-    form.typeEtablissement && form.nomEtablissement.trim() && form.ville.trim(),
+    form.metiers.length > 0 && form.nomEtablissement.trim() && form.ville.trim(),
     form.anciennete,
     form.prenom.trim() && /^(?:\+212|0)[5-7]\d{8}$/.test(form.telephone.trim())
       && form.email.includes("@"),
@@ -67,7 +74,10 @@ export default function Professionnels() {
     proprietairesApi
       .demanderDemo({
         nomEtablissement: form.nomEtablissement,
-        typeEtablissement: form.typeEtablissement,
+        // Le premier coché est le métier principal : l'ordre des cases est
+        // celui dans lequel le prospect a pensé son activité.
+        metiers: form.metiers,
+        typeEtablissement: form.metiers[0],
         specialite: form.specialite || null,
         ville: form.ville,
         quartier: form.quartier || null,
@@ -151,31 +161,42 @@ export default function Professionnels() {
         >
           {etape === 0 && (
             <fieldset>
+              {/* Plusieurs métiers, et non un seul.
+                  Des boutons radio n'en acceptaient qu'un : un institut qui
+                  fait la coiffure, l'onglerie et l'esthétique devait en
+                  choisir un, et le conseiller ne savait donc pas ce qu'il
+                  allait trouver sur place. */}
               <legend className="text-sm font-medium text-stone-700">
-                Quel est votre métier ?
+                Quels sont vos métiers ?
               </legend>
+              <p className="mt-1 text-xs text-stone-500">
+                Cochez tout ce que vous proposez — beaucoup de salons en font plusieurs.
+              </p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {METIERS.map(([valeur, libelle, detail]) => (
-                  <label
-                    key={valeur}
-                    className={`cursor-pointer rounded-xl border p-3 transition ${
-                      form.typeEtablissement === valeur
-                        ? "border-brand-500 bg-brand-50 ring-1 ring-brand-300"
-                        : "border-stone-200 hover:border-stone-300"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="metier"
-                      value={valeur}
-                      checked={form.typeEtablissement === valeur}
-                      onChange={() => poser("typeEtablissement", valeur)}
-                      className="sr-only"
-                    />
-                    <span className="block text-sm font-semibold text-stone-900">{libelle}</span>
-                    <span className="block text-xs text-stone-500">{detail}</span>
-                  </label>
-                ))}
+                {METIERS.map(([valeur, libelle, detail]) => {
+                  const coche = form.metiers.includes(valeur)
+                  return (
+                    <label
+                      key={valeur}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
+                        coche
+                          ? "border-brand-500 bg-brand-50 ring-1 ring-brand-300"
+                          : "border-stone-200 hover:border-stone-300"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={coche}
+                        onChange={() => basculerMetier(valeur)}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-stone-900">{libelle}</span>
+                        <span className="block text-xs text-stone-500">{detail}</span>
+                      </span>
+                    </label>
+                  )
+                })}
               </div>
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2">

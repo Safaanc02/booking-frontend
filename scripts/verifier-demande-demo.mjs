@@ -208,7 +208,10 @@ dire(!contient(contenu, 'créer un compte') && !contient(contenu, 'inscription')
 /* Étape 1 — l'établissement. */
 dire(!await boutonActif('Continuer'),
   'on ne peut pas avancer sans avoir renseigné l\'établissement')
+// Deux métiers : c'est le cas que des boutons radio refusaient, et celui qui
+// doit se propager jusqu'au formulaire de référencement.
 await clic('Esthétique')
+await clic('Onglerie')
 await remplir('Nom de l\'établissement', SALON)
 await remplir('Ville', 'Rabat')
 await remplir('Quartier', 'Agdal')
@@ -301,6 +304,8 @@ dire(contient(fiche, 'plus de 3 ans') && contient(fiche, '6 personnes'),
 dire(contient(fiche, 'locataire'), 'le statut du local est rappelé')
 dire(contient(fiche, 'carnet papier'), 'l\'outil actuel est rappelé')
 dire(contient(fiche, '001234567000078'), 'l\'ICE est repris tel quel')
+dire(contient(fiche, 'Esthétique') && contient(fiche, 'Onglerie'),
+  'les deux métiers déclarés apparaissent dans la file')
 dire(contient(fiche, EMAIL) && contient(fiche, '06 63 44 55 66'),
   'les coordonnées sont directement actionnables')
 
@@ -395,8 +400,9 @@ const prerempli = await page.evaluate(() => {
 dire(prerempli.nom === SALON && prerempli.ville === 'Rabat',
   'l\'établissement est repris tel quel')
 dire(prerempli.email === EMAIL, 'le gérant est repris comme propriétaire')
-dire(prerempli.metiers.some((m) => /esth/i.test(m ?? '')),
-  `le métier déclaré est coché d'avance (${prerempli.metiers.join(', ') || 'aucun'})`)
+dire(prerempli.metiers.some((m) => /esth/i.test(m ?? ''))
+  && prerempli.metiers.some((m) => /ongl/i.test(m ?? '')),
+  `les deux métiers déclarés sont cochés d'avance (${prerempli.metiers.join(', ') || 'aucun'})`)
 
 // Seule l'adresse manquait : la demande ne la réclame pas, pour ne pas
 // alourdir un formulaire public.

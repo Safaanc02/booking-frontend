@@ -119,7 +119,11 @@ export default function AdminDemandes({ onReferencer }) {
                     <div className="min-w-0">
                       <p className="font-semibold text-stone-900">{d.nomEtablissement}</p>
                       <p className="mt-0.5 text-sm text-stone-600">
-                        {METIERS[d.typeEtablissement] ?? d.typeEtablissement}
+                        {/* Tous les métiers déclarés : c'est ce qui décide de
+                            ce que le conseiller va trouver sur place. */}
+                        {(d.metiers?.length ? d.metiers : [d.typeEtablissement])
+                          .map((m) => METIERS[m] ?? m)
+                          .join(" · ")}
                         {d.specialite && <span className="text-stone-500"> · {d.specialite}</span>}
                         {" · "}{d.ville}
                         {d.quartier && <span className="text-stone-400"> ({d.quartier})</span>}

@@ -393,20 +393,51 @@ if (!mailpitJoignable) {
   }, client)
   console.log(' ', ok(!!creee.id), `réservation #${creee.id} créée pour le test du lien`)
 
-  // L'email part de façon asynchrone, après le commit de la transaction.
+  /*
+   * L'email part de façon asynchrone, après le commit de la transaction.
+   *
+   * On ne retient pas le premier message dont le sujet contient « confirmé » :
+   * il faut celui de CETTE réservation. Le jeton est donc vérifié par l'API
+   * avant de piloter le navigateur — un jeton qui désigne une autre
+   * réservation, ou une réservation déjà annulée, faisait échouer les deux
+   * assertions suivantes sans qu'on sache si le fautif était le lien, la page
+   * ou le délai. Cette section a lâché deux fois pour cette raison, puis
+   * réussi au coup d'après.
+   */
   let lien = null
-  const limiteMail = Date.now() + 20000
+  const limiteMail = Date.now() + 25000
   while (Date.now() < limiteMail && !lien) {
     const boite = await (await fetch(`${MAILPIT}/api/v1/messages`)).json()
-    const confirmation = boite.messages?.find((m) => m.Subject.includes('confirmé'))
-    if (confirmation) {
-      const detail = await (await fetch(`${MAILPIT}/api/v1/message/${confirmation.ID}`)).json()
+    for (const m of boite.messages ?? []) {
+      const detail = await (await fetch(`${MAILPIT}/api/v1/message/${m.ID}`)).json()
       const trouve = /\/annuler\?token=([\w.\-]+)/.exec(detail.HTML ?? '')
-      if (trouve) lien = trouve[1]
+      if (!trouve) continue
+      /*
+       * L'aperçu dit quel rendez-vous le jeton désigne — par son créneau, non
+       * par un identifiant : il circule par e-mail, et n'expose donc que de
+       * quoi reconnaître son propre rendez-vous. Le créneau suffit à
+       * l'identifier, puisque c'est celui qu'on vient de réserver.
+       */
+      const apercu = await fetch(
+        `${API}/api/public/reservations/apercu?token=${encodeURIComponent(trouve[1])}`)
+      if (!apercu.ok) continue
+      const vise = await apercu.json()
+      if (Date.parse(vise.debut) !== Date.parse(creneau.debut)) continue
+      if (!vise.annulable) {
+        // Cause probable des échecs intermittents : le créneau retenu tombait
+        // dans le préavis du salon, et la page proposait alors de contacter le
+        // salon plutôt que d'annuler.
+        console.log(`     ⚠️  le créneau retenu n'est pas annulable `
+          + `(préavis de ${vise.delaiAnnulationHeures} h) — assertions suivantes ininterprétables`)
+      }
+      lien = trouve[1]
+      break
     }
     if (!lien) await pause(400)
   }
-  console.log(' ', ok(lien !== null), lien ? 'lien d\'annulation présent dans l\'email' : 'lien absent ❌')
+  console.log(' ', ok(lien !== null),
+    lien ? `lien d'annulation présent dans l'email, et il vise bien #${creee.id}`
+         : `aucun email ne porte de lien vers la réservation #${creee.id} ❌`)
 
   if (lien) {
     // Contexte neuf, sans session : c'est tout l'intérêt du lien signé.
@@ -417,8 +448,13 @@ if (!mailpitJoignable) {
     brancher(pageAnonyme)
 
     await pageAnonyme.goto(`${BASE}/annuler?token=${lien}`, { waitUntil: 'networkidle0' })
-    console.log(' ', ok(await attendreSur(pageAnonyme, 'Annuler ce rendez-vous')),
-      'page accessible sans être connecté')
+    const accessible = await attendreSur(pageAnonyme, 'Annuler ce rendez-vous')
+    console.log(' ', ok(accessible), 'page accessible sans être connecté')
+    if (!accessible) {
+      // Dire ce qu'on voit : un échec muet ici se rejoue à l'aveugle.
+      console.log('     page obtenue :',
+        JSON.stringify((await txtDe(pageAnonyme)).slice(0, 220)))
+    }
     console.log(' ', ok(await attendreSur(pageAnonyme, prestation.nom)),
       'le rendez-vous visé est bien décrit')
 
