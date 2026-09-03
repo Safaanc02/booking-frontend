@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "verifier:accueil": "node scripts/verifier-accueil.mjs",
     "verifier:tunnel": "node scripts/verifier-tunnel.mjs",
     "verifier:pro": "node scripts/verifier-pro.mjs",
     "verifier:avis": "node scripts/verifier-avis.mjs",
