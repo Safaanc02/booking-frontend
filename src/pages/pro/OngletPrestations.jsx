@@ -3,6 +3,7 @@ import { prestationsApi } from "../../api/bookingApi"
 import { prix, duree } from "../../lib/format"
 import { EmptyState } from "../../components/Loader"
 import { Champ } from "./ProDashboard"
+import { metiersDuSalon } from "../../lib/metiers"
 
 /**
  * Catalogue pré-rempli par métier.
@@ -84,7 +85,25 @@ export default function OngletPrestations({ salon, onChange }) {
       .catch((erreur) => setEnvoi({ enCours: false, erreur }))
   }
 
-  const modeles = MODELES[salon.categorie] ?? MODELES.COIFFURE
+  /*
+   * Les modèles de tous les métiers du salon, pas seulement du principal.
+   *
+   * Un institut qui fait la coiffure, l'onglerie et l'esthétique ne voyait
+   * que les modèles de coiffure : les deux tiers de son catalogue restaient à
+   * saisir à la main, ce qui vide de son sens le pré-remplissage.
+   *
+   * Dédoublonnés par nom : « Soin à l'huile d'argan » figure en coiffure et
+   * en esthétique, et le proposer deux fois ferait douter d'une erreur.
+   */
+  const modeles = Object.values(
+    metiersDuSalon(salon)
+      .flatMap((m) => MODELES[m] ?? [])
+      .reduce((acc, m) => ({ [m.nom]: m, ...acc }), {})
+  )
+  // Ceux déjà au catalogue ne sont plus proposés : cocher une prestation
+  // existante produisait un doublon dans la liste du salon.
+  const dejaAu = new Set(prestations.map((p) => p.nom))
+  const aProposer = modeles.filter((m) => !dejaAu.has(m.nom))
   const champs = envoi.erreur?.details ?? {}
 
   return (
@@ -102,9 +121,11 @@ export default function OngletPrestations({ salon, onChange }) {
       {form && (
         <form onSubmit={enregistrer} className="mt-4 rounded-2xl bg-stone-50 p-5 ring-1 ring-stone-200">
           {/* Pré-remplissage : cliquer un modèle vaut mieux que tout ressaisir. */}
+          {aProposer.length > 0 && (
+            <>
           <p className="text-sm text-stone-600">Partir d'un modèle :</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {modeles.map((m) => (
+            {aProposer.map((m) => (
               <button
                 key={m.nom}
                 type="button"
@@ -115,6 +136,8 @@ export default function OngletPrestations({ salon, onChange }) {
               </button>
             ))}
           </div>
+            </>
+          )}
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Champ label="Nom" value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} erreur={champs.nom} required />

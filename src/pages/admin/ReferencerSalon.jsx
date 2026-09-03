@@ -1,15 +1,11 @@
 import { useState } from "react"
 import { adminApi } from "../../api/bookingApi"
 import { Champ } from "../pro/ProDashboard"
-
-const CATEGORIES = [
-  ["COIFFURE", "Coiffure"], ["BARBIER", "Barbier"], ["ONGLERIE", "Onglerie"],
-  ["ESTHETIQUE", "Esthétique"], ["SPA", "Hammam & spa"],
-]
+import { ORDRE_METIERS, libelleMetier } from "../../lib/metiers"
 
 const VIDE = {
   nom: "", ville: "", quartier: "", adresse: "", telephone: "", email: "",
-  categorie: "COIFFURE", delaiAnnulationHeures: "24",
+  categorie: "COIFFURE", metiers: ["COIFFURE"], delaiAnnulationHeures: "24",
   gerantPrenom: "", gerantNom: "", gerantEmail: "", gerantTelephone: "",
   validerImmediatement: true,
 }
@@ -27,17 +23,25 @@ const CATEGORIE_POUR = {
 }
 
 /** Reprend ce que la demande a déjà recueilli. L'adresse reste à saisir. */
-const depuisDemande = (d) => !d ? VIDE : {
+const depuisDemande = (d) => {
+  if (!d) return VIDE
+  const metier = CATEGORIE_POUR[d.typeEtablissement] ?? "COIFFURE"
+  return {
   ...VIDE,
   nom: d.nomEtablissement ?? "",
   ville: d.ville ?? "",
   quartier: d.quartier ?? "",
   telephone: d.telephone ?? "",
-  categorie: CATEGORIE_POUR[d.typeEtablissement] ?? "COIFFURE",
+  categorie: metier,
+  // Les cases cochées doivent suivre le métier déclaré, pas rester sur la
+  // valeur par défaut : le conseiller décochait « Coiffure » pour cocher
+  // « Esthétique » alors que la demande le disait déjà.
+  metiers: [metier],
   gerantPrenom: d.prenom ?? "",
   gerantNom: d.nom ?? "",
   gerantEmail: d.email ?? "",
   gerantTelephone: d.telephone ?? "",
+  }
 }
 
 /**
@@ -55,6 +59,20 @@ export default function ReferencerSalon({ demande }) {
 
   const maj = (cle) => (e) => setForm({ ...form, [cle]: e.target.value })
   const champs = envoi.erreur?.details ?? {}
+
+  /**
+   * Coche ou décoche un métier.
+   *
+   * Le premier de la liste est le métier principal : décocher celui-ci promeut
+   * le suivant, plutôt que de laisser le salon sans couleur. Un ordre stable
+   * évite aussi que la couverture change de teinte à chaque clic.
+   */
+  const basculerMetier = (cle) => {
+    const suivants = form.metiers.includes(cle)
+      ? form.metiers.filter((m) => m !== cle)
+      : [...form.metiers, cle]
+    setForm({ ...form, metiers: suivants, categorie: suivants[0] ?? form.categorie })
+  }
 
   const soumettre = (e) => {
     e.preventDefault()
@@ -126,15 +144,49 @@ export default function ReferencerSalon({ demande }) {
             <Champ label="Téléphone du salon" value={form.telephone} onChange={maj("telephone")}
                    erreur={champs["salon.telephone"]} placeholder="0539112233" required />
             <Champ label="E-mail du salon" type="email" value={form.email} onChange={maj("email")} erreur={champs["salon.email"]} />
-            <label className="block">
-              <span className="text-sm text-stone-600">Activité</span>
-              <select value={form.categorie} onChange={maj("categorie")}
-                className="mt-1 w-full rounded-xl border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-400">
-                {CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
-            </label>
             <Champ label="Préavis d'annulation (heures)" type="number" min="0" max="168"
                    value={form.delaiAnnulationHeures} onChange={maj("delaiAnnulationHeures")} />
+
+            {/* Plusieurs métiers, et non un seul.
+                L'institut de quartier fait la coiffure, l'onglerie et
+                l'esthétique : n'en retenir qu'un le rendait introuvable pour
+                les deux autres. Le premier coché devient le principal — c'est
+                lui qui donne au salon sa couleur dans l'interface. */}
+            <fieldset className="sm:col-span-2">
+              <legend className="text-sm text-stone-600">Métiers exercés</legend>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {ORDRE_METIERS.map((cle) => {
+                  const coche = form.metiers.includes(cle)
+                  const principal = form.metiers[0] === cle
+                  return (
+                    <label
+                      key={cle}
+                      className={`cursor-pointer rounded-full border px-3.5 py-2 text-sm transition ${
+                        coche
+                          ? "border-brand-600 bg-brand-600 font-medium text-white"
+                          : "border-stone-200 bg-white text-stone-700 hover:border-stone-300"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={coche}
+                        onChange={() => basculerMetier(cle)}
+                        className="sr-only"
+                      />
+                      {libelleMetier(cle)}
+                      {principal && (
+                        <span className="ml-1.5 text-[11px] font-normal text-brand-100">
+                          principal
+                        </span>
+                      )}
+                    </label>
+                  )
+                })}
+              </div>
+              {form.metiers.length === 0 && (
+                <p className="mt-2 text-xs text-red-600">Cochez au moins un métier.</p>
+              )}
+            </fieldset>
           </div>
         </fieldset>
 
@@ -182,7 +234,7 @@ export default function ReferencerSalon({ demande }) {
 
         <button
           type="submit"
-          disabled={envoi.enCours}
+          disabled={envoi.enCours || form.metiers.length === 0}
           className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:bg-stone-300"
         >
           {envoi.enCours ? "Référencement…" : "Référencer le salon"}

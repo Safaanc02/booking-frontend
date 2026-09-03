@@ -373,16 +373,30 @@ const prerempli = await page.evaluate(() => {
   const lire = (l) => [...document.querySelectorAll('label')]
     .find((e) => e.querySelector('span')?.innerText.trim() === l)
     ?.querySelector('input, select')?.value
+  /*
+   * Les métiers sont des cases à cocher, non un menu déroulant.
+   *
+   * Un salon en exerce plusieurs — l'institut fait la coiffure, l'onglerie et
+   * l'esthétique — et le menu « Activité » qui n'en acceptait qu'un a
+   * disparu. Le test lisait sa valeur et trouvait « undefined ».
+   */
+  // Restreint au groupe des métiers : la page porte aussi la case
+  // « Mettre en ligne tout de suite », qui n'est pas un métier.
+  const groupe = [...document.querySelectorAll('fieldset')]
+    .find((f) => /métiers exercés/i.test(f.querySelector('legend')?.innerText ?? ''))
+  const metiers = [...(groupe?.querySelectorAll('input[type=checkbox]') ?? [])]
+    .filter((c) => c.checked)
+    .map((c) => c.closest('label')?.innerText.trim().split(/\s+/)[0])
   return {
     nom: lire('Nom du salon'), ville: lire('Ville'),
-    email: lire('E-mail'), categorie: lire('Activité'),
+    email: lire('E-mail'), metiers,
   }
 })
 dire(prerempli.nom === SALON && prerempli.ville === 'Rabat',
   'l\'établissement est repris tel quel')
 dire(prerempli.email === EMAIL, 'le gérant est repris comme propriétaire')
-dire(prerempli.categorie === 'ESTHETIQUE',
-  `le métier déclaré devient la catégorie du salon (${prerempli.categorie})`)
+dire(prerempli.metiers.some((m) => /esth/i.test(m ?? '')),
+  `le métier déclaré est coché d'avance (${prerempli.metiers.join(', ') || 'aucun'})`)
 
 // Seule l'adresse manquait : la demande ne la réclame pas, pour ne pas
 // alourdir un formulaire public.

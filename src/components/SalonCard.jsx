@@ -1,11 +1,7 @@
 import { Link } from "react-router-dom"
 import { prix as formatPrix } from "../lib/format"
+import { libelleMetier, metiersDuSalon } from "../lib/metiers"
 import Couverture from "./Couverture"
-
-const METIERS = {
-  COIFFURE: "Coiffure", BARBIER: "Barbier", ONGLERIE: "Onglerie",
-  ESTHETIQUE: "Esthétique", SPA: "Hammam & spa",
-}
 
 /**
  * Carte d'un salon dans une liste de résultats.
@@ -22,8 +18,10 @@ const METIERS = {
  *     la moins utile de la carte, et la plus contradictoire : tout le produit
  *     consiste à ne plus décrocher. Un tarif aide à choisir.
  *
- *   • le métier écrit. « Nails & Co » ne dit pas à tout le monde qu'on y fait
- *     les ongles.
+ *   • les métiers écrits. « Nails & Co » ne dit pas à tout le monde qu'on y
+ *     fait les ongles — et un institut qui fait aussi la coiffure et
+ *     l'esthétique doit pouvoir le montrer. Au-delà de deux, le surplus est
+ *     compté : trois étiquettes suffisent à encombrer une carte.
  *
  * Un salon sans avis est annoncé « Nouveau » à la place de la note, et non
  * « Pas encore d'avis » sur la ligne du prix : la formule négative
@@ -33,8 +31,20 @@ const METIERS = {
  * La ville disparaît quand la recherche la filtre déjà : dans une liste
  * « Casablanca », l'étiquette Casablanca sur chaque carte n'apprend rien.
  */
-export default function SalonCard({ salon, villeFiltree = false }) {
+export default function SalonCard({ salon, villeFiltree = false, metierFiltre = null }) {
   const note = salon.noteMoyenne && salon.nombreAvis
+  /*
+   * Le métier filtré passe en tête.
+   *
+   * Sans cela, un institut de coiffure trouvé sous « Onglerie » affichait
+   * « Coiffure, Esthétique, +1 » : le métier qui justifiait sa présence dans
+   * la liste était le seul caché, ce qui donne l'impression d'un résultat
+   * hors sujet.
+   */
+  const tous = metiersDuSalon(salon)
+  const metiers = metierFiltre && tous.includes(metierFiltre)
+    ? [metierFiltre, ...tous.filter((m) => m !== metierFiltre)]
+    : tous
   const lieu = [salon.quartier, villeFiltree ? null : salon.ville].filter(Boolean).join(" · ")
 
   return (
@@ -56,8 +66,20 @@ export default function SalonCard({ salon, villeFiltree = false }) {
             <span className="font-medium text-stone-500">Nouveau</span>
           )}
         </span>
-        <span className="absolute bottom-3 left-3 rounded-full bg-black/25 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
-          {METIERS[salon.categorie] ?? salon.categorie}
+        <span className="absolute bottom-3 left-3 flex flex-wrap gap-1">
+          {metiers.slice(0, 2).map((m) => (
+            <span
+              key={m}
+              className="rounded-full bg-black/25 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-white backdrop-blur-sm"
+            >
+              {libelleMetier(m)}
+            </span>
+          ))}
+          {metiers.length > 2 && (
+            <span className="rounded-full bg-black/25 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
+              +{metiers.length - 2}
+            </span>
+          )}
         </span>
       </Couverture>
 

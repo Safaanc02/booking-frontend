@@ -7,11 +7,7 @@ import ListeAvis from "../components/ListeAvis"
 import Couverture, { Initiales } from "../components/Couverture"
 import { EtoileHuit } from "../components/Motifs"
 import { Horloge, Etiquette } from "../components/Glyphes"
-
-const METIERS = {
-  COIFFURE: "Coiffure", BARBIER: "Barbier", ONGLERIE: "Onglerie",
-  ESTHETIQUE: "Esthétique", SPA: "Hammam & spa",
-}
+import { libelleMetier, metiersDuSalon } from "../lib/metiers"
 
 /**
  * Fiche d'un salon.
@@ -85,8 +81,18 @@ export default function SalonDetails() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
         <div className="absolute inset-x-0 bottom-0">
           <div className="mx-auto max-w-6xl px-4 pb-6">
-            <span className="inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
-              {METIERS[salon.categorie] ?? salon.categorie}
+            {/* Tous les métiers, sans troncature : sur la fiche, la place ne
+                manque pas, et c'est l'endroit où l'on vérifie qu'un salon
+                fait bien ce qu'on cherche. */}
+            <span className="flex flex-wrap gap-1.5">
+              {metiersDuSalon(salon).map((m) => (
+                <span
+                  key={m}
+                  className="rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm"
+                >
+                  {libelleMetier(m)}
+                </span>
+              ))}
             </span>
             <h1 className="mt-3 text-3xl font-bold tracking-tight text-white drop-shadow-sm sm:text-4xl">
               {salon.nom}

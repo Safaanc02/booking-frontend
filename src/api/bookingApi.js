@@ -2,10 +2,23 @@ import { client } from "./client"
 
 /** Routes publiques — aucun token requis. */
 export const publicApi = {
-  rechercherSalons: ({ ville, q, page = 0, size = 20 } = {}) =>
+  /**
+   * Recherche publique.
+   *
+   * `metier` est filtré par le serveur, sur l'ensemble des métiers exercés.
+   * L'interface le faisait sur la page reçue, si bien qu'un filtre ne voyait
+   * que les vingt premiers résultats.
+   */
+  rechercherSalons: ({ ville, q, metier, page = 0, size = 20 } = {}) =>
     client
       .get("/api/public/salons", {
-        params: { ville: ville || undefined, q: q || undefined, page, size },
+        params: {
+          ville: ville || undefined,
+          q: q || undefined,
+          metier: metier || undefined,
+          page,
+          size,
+        },
       })
       .then((r) => r.data),
 

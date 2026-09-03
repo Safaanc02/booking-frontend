@@ -8,14 +8,8 @@ import { EtoileHuit } from "../components/Motifs"
 import {
   Coiffure, Barbier, Onglerie, Esthetique, Hammam,
 } from "../components/Glyphes"
+import { ORDRE_METIERS, libelleMetier } from "../lib/metiers"
 
-const METIERS = [
-  { cle: "COIFFURE", libelle: "Coiffure" },
-  { cle: "BARBIER", libelle: "Barbier" },
-  { cle: "ONGLERIE", libelle: "Onglerie" },
-  { cle: "ESTHETIQUE", libelle: "Esthétique" },
-  { cle: "SPA", libelle: "Hammam & spa" },
-]
 const GLYPHES = {
   COIFFURE: Coiffure, BARBIER: Barbier, ONGLERIE: Onglerie,
   ESTHETIQUE: Esthetique, SPA: Hammam,
@@ -48,10 +42,15 @@ function Squelettes() {
 /**
  * Résultats de recherche.
  *
- * Le filtre par métier est côté client, sur la page reçue. C'est assumé au
- * volume actuel — une vingtaine de salons — et l'écran reste réactif sans
- * aller-retour. Au-delà d'une page, il faudra le porter dans la requête,
- * faute de quoi il ne filtrerait que ce qui est déjà affiché.
+ * Le filtre par métier est appliqué par le serveur, sur l'ensemble des métiers
+ * exercés — un institut déclaré en coiffure qui fait aussi les ongles remonte
+ * sous « Onglerie ». Il l'était côté client sur la page reçue, ce qui ne
+ * filtrait que les vingt premiers résultats : « Onglerie » pouvait ne rien
+ * rendre alors que la ville comptait plusieurs ongleries.
+ *
+ * Conséquence : les pastilles de métier ne peuvent plus se déduire des
+ * résultats affichés, puisque filtrer par un métier fait disparaître les
+ * autres. Elles viennent donc de la liste fixe des cinq familles.
  */
 export default function Results() {
   const [params, setParams] = useSearchParams()
@@ -64,16 +63,15 @@ export default function Results() {
   const charger = useCallback(() => {
     setEtat({ statut: "chargement", data: null, erreur: null })
     publicApi
-      .rechercherSalons({ q, ville })
+      .rechercherSalons({ q, ville, metier })
       .then((data) => setEtat({ statut: "ok", data, erreur: null }))
       .catch((erreur) => setEtat({ statut: "erreur", data: null, erreur }))
-  }, [q, ville])
+  }, [q, ville, metier])
 
   useEffect(charger, [charger])
 
-  const recus = etat.data?.content ?? []
-  const salons = metier ? recus.filter((s) => s.categorie === metier) : recus
-  const presents = new Set(recus.map((s) => s.categorie))
+  const salons = etat.data?.content ?? []
+  const total = etat.data?.totalElements ?? salons.length
 
   const basculerMetier = (cle) => {
     const suivant = new URLSearchParams(params)
@@ -101,23 +99,20 @@ export default function Results() {
             <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-3">
               <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-stone-900">
                 <EtoileHuit className="h-3 w-3 shrink-0 text-brand-500" />
-                {salons.length === 0
+                {total === 0
                   ? "Aucun salon"
-                  : `${salons.length} salon${salons.length > 1 ? "s" : ""}`}
+                  : `${total} salon${total > 1 ? "s" : ""}`}
                 {ville && <span className="font-normal text-stone-500">à {ville}</span>}
               </h1>
 
-              {/* Seuls les métiers réellement présents sont proposés : un
-                  filtre qui ne rend rien est une impasse offerte au visiteur. */}
-              {presents.size > 1 && (
-                <div className="flex flex-wrap gap-2">
-                  {METIERS.filter((m) => presents.has(m.cle)).map((m) => {
-                    const Glyphe = GLYPHES[m.cle]
-                    const actif = metier === m.cle
+              <div className="flex flex-wrap gap-2">
+                  {ORDRE_METIERS.map((cle) => {
+                    const Glyphe = GLYPHES[cle]
+                    const actif = metier === cle
                     return (
                       <button
-                        key={m.cle}
-                        onClick={() => basculerMetier(m.cle)}
+                        key={cle}
+                        onClick={() => basculerMetier(cle)}
                         aria-pressed={actif}
                         className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm transition ${
                           actif
@@ -126,12 +121,11 @@ export default function Results() {
                         }`}
                       >
                         <Glyphe className="h-4 w-4" />
-                        {m.libelle}
+                        {libelleMetier(cle)}
                       </button>
                     )
                   })}
-                </div>
-              )}
+              </div>
             </div>
 
             {salons.length === 0 ? (
@@ -151,7 +145,7 @@ export default function Results() {
                       onClick={() => basculerMetier(metier)}
                       className="mt-6 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700"
                     >
-                      Voir les {recus.length} salons
+                      Retirer le filtre de métier
                     </button>
                   )}
                 </div>
@@ -159,7 +153,12 @@ export default function Results() {
             ) : (
               <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {salons.map((s) => (
-                  <SalonCard key={s.id} salon={s} villeFiltree={Boolean(ville)} />
+                  <SalonCard
+                    key={s.id}
+                    salon={s}
+                    villeFiltree={Boolean(ville)}
+                    metierFiltre={metier || null}
+                  />
                 ))}
               </div>
             )}
