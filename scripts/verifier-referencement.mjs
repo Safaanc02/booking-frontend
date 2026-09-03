@@ -35,6 +35,21 @@ const BASE = process.env.BASE_URL ?? 'http://localhost:5173'
 const API = process.env.API_URL ?? 'http://localhost:8080'
 const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025'
 const KC = process.env.KC_URL ?? 'http://localhost:8081'
+/**
+ * Arguments supplémentaires pour le navigateur.
+ *
+ * Sert notamment à vérifier une pile joignable par une adresse que le
+ * résolveur local ignore — certaines box ne répondent pas sur les
+ * sous-domaines de tunnel :
+ *
+ *   CHROME_ARGS='--host-resolver-rules="MAP essai.exemple.com 1.2.3.4"'
+ *
+ * Le découpage respecte les guillemets. Un simple split sur l'espace coupait
+ * la règle ci-dessus en trois arguments, dont Chrome prenait les deux
+ * derniers pour des adresses à ouvrir — il refusait alors de démarrer.
+ */
+const ARGS_SUP = (process.env.CHROME_ARGS ?? '')
+  .match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)?.map((a) => a.replace(/["']/g, '')) ?? []
 const ok = (c) => (c ? '✅' : '❌')
 
 /* Un identifiant par exécution : le script doit pouvoir tourner deux fois. */
@@ -53,7 +68,7 @@ const dire = (condition, libelle) => {
 const pause = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const browser = await puppeteer.launch({
-  executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu'],
+  executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu', ...ARGS_SUP],
 })
 const page = await browser.newPage()
 await page.setViewport({ width: 1400, height: 1100 })
@@ -218,7 +233,7 @@ console.log('─── Le gérant prend la main ──────────�
  * jamais celui du gérant, et le test mesurait autre chose que la réalité.
  */
 const navigateurGerant = await puppeteer.launch({
-  executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu'],
+  executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu', ...ARGS_SUP],
 })
 const gerant = await navigateurGerant.newPage()
 await gerant.setViewport({ width: 1280, height: 1000 })

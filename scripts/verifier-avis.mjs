@@ -27,6 +27,21 @@ const CHROME = process.env.CHROME_PATH
  *     npm run verifier:accueil
  */
 const BASE = process.env.BASE_URL ?? 'http://localhost:5173'
+/**
+ * Arguments supplémentaires pour le navigateur.
+ *
+ * Sert notamment à vérifier une pile joignable par une adresse que le
+ * résolveur local ignore — certaines box ne répondent pas sur les
+ * sous-domaines de tunnel :
+ *
+ *   CHROME_ARGS='--host-resolver-rules="MAP essai.exemple.com 1.2.3.4"'
+ *
+ * Le découpage respecte les guillemets. Un simple split sur l'espace coupait
+ * la règle ci-dessus en trois arguments, dont Chrome prenait les deux
+ * derniers pour des adresses à ouvrir — il refusait alors de démarrer.
+ */
+const ARGS_SUP = (process.env.CHROME_ARGS ?? '')
+  .match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)?.map((a) => a.replace(/["']/g, '')) ?? []
 const ok = (c) => (c ? '✅' : '❌')
 const COMMENTAIRE = `Très bon accueil, essai ${Date.now().toString().slice(-5)}`
 
@@ -142,7 +157,7 @@ console.log(`   propriétaire du salon : ${rdv.proprietaire}`)
 console.log()
 
 const browser = await puppeteer.launch({
-  executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu'],
+  executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu', ...ARGS_SUP],
 })
 const page = await browser.newPage()
 await page.setViewport({ width: 1280, height: 1000 })

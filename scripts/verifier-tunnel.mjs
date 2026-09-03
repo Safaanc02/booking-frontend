@@ -27,6 +27,21 @@ const CHROME = process.env.CHROME_PATH
  *     npm run verifier:accueil
  */
 const BASE = process.env.BASE_URL ?? 'http://localhost:5173'
+/**
+ * Arguments supplémentaires pour le navigateur.
+ *
+ * Sert notamment à vérifier une pile joignable par une adresse que le
+ * résolveur local ignore — certaines box ne répondent pas sur les
+ * sous-domaines de tunnel :
+ *
+ *   CHROME_ARGS='--host-resolver-rules="MAP essai.exemple.com 1.2.3.4"'
+ *
+ * Le découpage respecte les guillemets. Un simple split sur l'espace coupait
+ * la règle ci-dessus en trois arguments, dont Chrome prenait les deux
+ * derniers pour des adresses à ouvrir — il refusait alors de démarrer.
+ */
+const ARGS_SUP = (process.env.CHROME_ARGS ?? '')
+  .match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)?.map((a) => a.replace(/["']/g, '')) ?? []
 const ok = (c) => (c ? '✅' : '❌')
 
 // Compte de démonstration du realm Keycloak importé par docker compose.
@@ -62,7 +77,7 @@ const appel = async (chemin, options = {}, token) => {
 
 const browser = await puppeteer.launch({
   executablePath: CHROME, headless: 'new',
-  args: ['--no-sandbox', '--disable-gpu'],
+  args: ['--no-sandbox', '--disable-gpu', ...ARGS_SUP],
 })
 const page = await browser.newPage()
 await page.setViewport({ width: 1280, height: 900 })
@@ -253,8 +268,21 @@ await attendre('réservation est confirmée')
 t = await txt()
 console.log(' ', ok(page.url().includes('/compte')), 'redirigé vers le compte')
 console.log(' ', ok(t.includes('réservation est confirmée')), 'message de confirmation')
-console.log(' ', ok(contient(t, 'À venir')), 'classée dans « à venir »')
-console.log(' ', ok(t.includes('Confirmée')), 'statut CONFIRMEE')
+
+/*
+ * La liste est attendue, non lue au vol.
+ *
+ * La bannière de confirmation s'affiche dès l'arrivée sur /compte ; les
+ * réservations, elles, sont chargées ensuite. En local l'écart est
+ * imperceptible et un instantané pris juste après suffisait. À travers un
+ * tunnel, chaque requête coûte un demi-tour du monde : le même instantané
+ * arrivait avant la liste, et quatre assertions tombaient sur un produit
+ * parfaitement fonctionnel.
+ */
+console.log(' ', ok(await attendre('À venir')), 'classée dans « à venir »')
+console.log(' ', ok(await attendre('Confirmée')), 'statut CONFIRMEE')
+// La ligne annulable doit être là avant qu'on la cherche.
+await page.waitForSelector('li[data-reservation-id]', { timeout: 15000 }).catch(() => {})
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/compte.png' })
 
 console.log('\n─── Annulation ─────────────────────────────────────')
