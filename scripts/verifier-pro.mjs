@@ -18,7 +18,20 @@ import puppeteer from 'puppeteer-core'
 
 const CHROME = process.env.CHROME_PATH
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-const BASE = 'http://localhost:5173'
+/*
+ * Adresses pilotables par l'environnement.
+ *
+ * En développement, chaque service a son port. Dans la pile partagée, tout
+ * tient derrière une seule adresse — le site à la racine, l'API sous /api,
+ * Keycloak sous /auth, la boîte de test sous /courrier. Les mêmes suites
+ * doivent pouvoir vérifier les deux, sans quoi la configuration qu'on livre
+ * n'est jamais celle qu'on a testée.
+ *
+ *   BASE_URL=https://essai.exemple.ma API_URL=https://essai.exemple.ma/api \
+ *   KC_URL=https://essai.exemple.ma/auth MAILPIT_URL=https://essai.exemple.ma/courrier \
+ *     npm run verifier:accueil
+ */
+const BASE = process.env.BASE_URL ?? 'http://localhost:5173'
 const IDENTIFIANT = process.env.TEST_PRO ?? 'pro1'
 const MOT_DE_PASSE = process.env.TEST_PRO_PASSWORD ?? 'pro1'
 const ok = (c) => (c ? '✅' : '❌')

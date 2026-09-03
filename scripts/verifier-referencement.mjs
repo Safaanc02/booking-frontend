@@ -18,9 +18,23 @@ import puppeteer from 'puppeteer-core'
 
 const CHROME = process.env.CHROME_PATH
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-const BASE = 'http://localhost:5173'
+/*
+ * Adresses pilotables par l'environnement.
+ *
+ * En développement, chaque service a son port. Dans la pile partagée, tout
+ * tient derrière une seule adresse — le site à la racine, l'API sous /api,
+ * Keycloak sous /auth, la boîte de test sous /courrier. Les mêmes suites
+ * doivent pouvoir vérifier les deux, sans quoi la configuration qu'on livre
+ * n'est jamais celle qu'on a testée.
+ *
+ *   BASE_URL=https://essai.exemple.ma API_URL=https://essai.exemple.ma/api \
+ *   KC_URL=https://essai.exemple.ma/auth MAILPIT_URL=https://essai.exemple.ma/courrier \
+ *     npm run verifier:accueil
+ */
+const BASE = process.env.BASE_URL ?? 'http://localhost:5173'
 const API = process.env.API_URL ?? 'http://localhost:8080'
 const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025'
+const KC = process.env.KC_URL ?? 'http://localhost:8081'
 const ok = (c) => (c ? '✅' : '❌')
 
 /* Un identifiant par exécution : le script doit pouvoir tourner deux fois. */
@@ -250,8 +264,21 @@ dire(contient(confirmation, 'enregistré') || contient(confirmation, 'mis à jou
 // Keycloak ne redirige jamais seul après une action détachée : il propose le
 // retour. Ce lien est la dernière marche du parcours — s'il manque, le gérant
 // est arrivé au bout sans savoir où aller.
-const retour = await gerant.evaluate(() =>
-  [...document.querySelectorAll('a')].find((a) => a.href.includes(':5173'))?.href ?? null)
+/*
+ * Le lien de retour se reconnaît à ce qu'il n'est pas.
+ *
+ * Deux tentatives ratées avant celle-ci : « contient :5173 » ne voyait plus
+ * rien dès que le site changeait de port, et « commence par l'origine du
+ * site » attrapait le sélecteur de langue — car derrière un proxy unique,
+ * Keycloak partage justement cette origine. Restent les marqueurs propres à
+ * ses pages, valables quelle que soit la topologie.
+ */
+const KEYCLOAK = /\/realms\/|\/login-actions\/|kc_locale=/
+const retour = await gerant.evaluate((motif) =>
+  [...document.querySelectorAll('a')]
+    .map((a) => a.href)
+    .find((h) => h && !new RegExp(motif).test(h)) ?? null,
+  KEYCLOAK.source)
 dire(retour !== null, `le retour vers l'application est proposé (${retour ?? 'absent'})`)
 
 await gerant.goto(retour, { waitUntil: 'networkidle0' })
@@ -305,7 +332,7 @@ dire(trouve?.ville === 'Tanger', 'sa ville est celle saisie par le conseiller')
  * Cloisonnement : le nouveau gérant ne voit que son salon.
  * ------------------------------------------------------------------ */
 const jeton = await (await fetch(
-  'http://localhost:8081/realms/booking-realm/protocol/openid-connect/token', {
+  `${KC}/realms/booking-realm/protocol/openid-connect/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({

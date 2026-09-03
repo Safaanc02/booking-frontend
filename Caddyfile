@@ -1,0 +1,49 @@
+# Point d'entrée unique de l'application partagée.
+#
+# Tout arrive sur une seule adresse : le site à la racine, l'API sous /api,
+# Keycloak sous /auth, la boîte aux lettres de test sous /courrier. Ce choix
+# n'est pas cosmétique — il supprime CORS, rend les URI de redirection du
+# realm portables (une URI relative suffit) et donne une seule adresse à
+# transmettre.
+#
+# Caddy termine le TLS tout seul quand un nom de domaine est fourni ; derrière
+# un tunnel, le chiffrement est assuré en amont et l'on reste en clair ici.
+
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	# Keycloak est configuré avec KC_HTTP_RELATIVE_PATH=/auth : le préfixe
+	# lui est donc transmis tel quel, sans être retiré au passage.
+	handle /auth/* {
+		reverse_proxy keycloak:8080
+	}
+
+	# Serveur de messagerie de test : il capture les envois sans les livrer.
+	# Indispensable pour suivre une invitation de gérant de bout en bout.
+	handle /courrier* {
+		reverse_proxy mailpit:8025
+	}
+
+	# Le site. try_files renvoie index.html pour toute adresse qui ne
+	# correspond à aucun fichier : le routage se fait dans le navigateur, et
+	# un lien d'annulation reçu par e-mail arrive toujours en accès direct.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

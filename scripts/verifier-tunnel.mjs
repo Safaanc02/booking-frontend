@@ -13,7 +13,20 @@ import puppeteer from 'puppeteer-core'
 
 const CHROME = process.env.CHROME_PATH
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-const BASE = 'http://localhost:5173'
+/*
+ * Adresses pilotables par l'environnement.
+ *
+ * En développement, chaque service a son port. Dans la pile partagée, tout
+ * tient derrière une seule adresse — le site à la racine, l'API sous /api,
+ * Keycloak sous /auth, la boîte de test sous /courrier. Les mêmes suites
+ * doivent pouvoir vérifier les deux, sans quoi la configuration qu'on livre
+ * n'est jamais celle qu'on a testée.
+ *
+ *   BASE_URL=https://essai.exemple.ma API_URL=https://essai.exemple.ma/api \
+ *   KC_URL=https://essai.exemple.ma/auth MAILPIT_URL=https://essai.exemple.ma/courrier \
+ *     npm run verifier:accueil
+ */
+const BASE = process.env.BASE_URL ?? 'http://localhost:5173'
 const ok = (c) => (c ? '✅' : '❌')
 
 // Compte de démonstration du realm Keycloak importé par docker compose.
@@ -215,7 +228,11 @@ await Promise.all([
   clic('Se connecter et confirmer'),
 ])
 await new Promise((r) => setTimeout(r, 1000))
-console.log(' ', ok(page.url().includes(':8081')), 'redirigé vers Keycloak')
+// Reconnu à son chemin et non à son port : derrière un proxy unique,
+// Keycloak partage l'origine du site et vit sous /auth. Le test ne doit pas
+// dépendre de la topologie choisie pour l'hébergement.
+console.log(' ', ok(/\/realms\/[^/]+\/protocol\/openid-connect|\/login-actions\//.test(page.url())),
+  `redirigé vers Keycloak (${new URL(page.url()).pathname.slice(0, 48)}…)`)
 
 await page.type('#username', IDENTIFIANT)
 await page.type('#password', MOT_DE_PASSE)
