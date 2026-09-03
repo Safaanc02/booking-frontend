@@ -30,7 +30,7 @@ export default function Couverture({ salon, hauteur = "h-32", className = "", ch
     >
       <TrameZellige
         id={id}
-        taille={56}
+        taille={104}
         className="pointer-events-none absolute h-[190%] w-[190%] text-white/25"
         style={{ inset: ancrage }}
       />

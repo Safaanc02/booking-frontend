@@ -4,31 +4,63 @@ import { prix, duree } from "../../lib/format"
 import { EmptyState } from "../../components/Loader"
 import { Champ } from "./ProDashboard"
 
-/** Catalogue pré-rempli par métier : c'est le paramétrage initial qui décourage le plus. */
+/**
+ * Catalogue pré-rempli par métier.
+ *
+ * C'est le paramétrage initial qui décourage le plus : trente prestations à
+ * saisir, et le gérant referme l'écran. Ces modèles existent pour qu'il
+ * coche au lieu de taper.
+ *
+ * Le vocabulaire est marocain, et ce n'est pas une coquetterie. Un catalogue
+ * qui propose « gommage corps » à un hammam alors qu'on y demande un beldi
+ * au savon noir avec le gant kessa se fait corriger ligne par ligne — ce qui
+ * annule tout le bénéfice du pré-remplissage. Le henné, le rhassoul de
+ * l'Atlas, l'épilation au sucre et la coiffure de mariée sont l'ordinaire de
+ * ces établissements, pas des options exotiques.
+ *
+ * Les tarifs sont des ordres de grandeur de milieu de gamme urbain, à
+ * ajuster : ils servent à éviter la saisie, pas à fixer les prix.
+ */
 const MODELES = {
   COIFFURE: [
     { nom: "Coupe femme", categorie: "Coupe", prix: 200, dureeMinutes: 45 },
     { nom: "Brushing", categorie: "Coiffage", prix: 120, dureeMinutes: 30 },
     { nom: "Coloration", categorie: "Couleur", prix: 450, dureeMinutes: 90 },
     { nom: "Balayage", categorie: "Couleur", prix: 650, dureeMinutes: 120 },
+    { nom: "Soin à l’huile d’argan", categorie: "Soin", prix: 250, dureeMinutes: 45 },
+    { nom: "Lissage", categorie: "Coiffage", prix: 500, dureeMinutes: 90 },
+    // La saison des mariages fait vivre beaucoup de salons : le forfait
+    // mérite sa ligne, avec une durée réaliste.
+    { nom: "Coiffure de mariée", categorie: "Événement", prix: 1200, dureeMinutes: 150 },
   ],
   BARBIER: [
     { nom: "Coupe homme", categorie: "Coupe", prix: 80, dureeMinutes: 30 },
     { nom: "Barbe", categorie: "Barbe", prix: 50, dureeMinutes: 20 },
     { nom: "Coupe + barbe", categorie: "Forfait", prix: 120, dureeMinutes: 45 },
+    { nom: "Rasage traditionnel au coupe-chou", categorie: "Rasage", prix: 70, dureeMinutes: 30 },
+    { nom: "Coupe enfant", categorie: "Coupe", prix: 50, dureeMinutes: 20 },
   ],
   ONGLERIE: [
     { nom: "Manucure simple", categorie: "Mains", prix: 100, dureeMinutes: 30 },
     { nom: "Pose vernis semi-permanent", categorie: "Mains", prix: 180, dureeMinutes: 60 },
     { nom: "Pédicure", categorie: "Pieds", prix: 150, dureeMinutes: 45 },
+    { nom: "Henné mains", categorie: "Henné", prix: 150, dureeMinutes: 45 },
+    { nom: "Henné mains et pieds", categorie: "Henné", prix: 300, dureeMinutes: 90 },
   ],
   ESTHETIQUE: [
     { nom: "Épilation sourcils", categorie: "Épilation", prix: 60, dureeMinutes: 15 },
+    { nom: "Épilation au sucre, jambes complètes", categorie: "Épilation", prix: 200, dureeMinutes: 45 },
     { nom: "Soin du visage", categorie: "Soin", prix: 350, dureeMinutes: 60 },
+    { nom: "Soin à l’huile d’argan", categorie: "Soin", prix: 400, dureeMinutes: 60 },
+    { nom: "Masque au rhassoul", categorie: "Soin", prix: 250, dureeMinutes: 40 },
   ],
   SPA: [
-    { nom: "Hammam traditionnel", categorie: "Hammam", prix: 200, dureeMinutes: 60 },
-    { nom: "Massage relaxant", categorie: "Massage", prix: 400, dureeMinutes: 60 },
+    { nom: "Hammam beldi", categorie: "Hammam", prix: 200, dureeMinutes: 60 },
+    { nom: "Gommage au savon noir et gant kessa", categorie: "Hammam", prix: 150, dureeMinutes: 40 },
+    { nom: "Enveloppement au rhassoul", categorie: "Hammam", prix: 200, dureeMinutes: 45 },
+    { nom: "Hammam, gommage et rhassoul", categorie: "Forfait", prix: 450, dureeMinutes: 120 },
+    { nom: "Massage à l’huile d’argan", categorie: "Massage", prix: 400, dureeMinutes: 60 },
+    { nom: "Massage relaxant", categorie: "Massage", prix: 350, dureeMinutes: 60 },
   ],
 }
 

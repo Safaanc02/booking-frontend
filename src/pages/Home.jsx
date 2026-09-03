@@ -10,7 +10,7 @@ import {
   Coiffure, Barbier, Onglerie, Esthetique, Hammam,
   Horloge, Etiquette, Rappel,
 } from "../components/Glyphes"
-import { ZONE, prix, duree, jourLong, heureLocale } from "../lib/format"
+import { ZONE, prix, duree, jourLong, heureLocale, dateHijri } from "../lib/format"
 
 /** Amplitude d'ouverture courante des salons du réseau, en heures locales. */
 const OUVERTURE = [9, 19]
@@ -22,12 +22,22 @@ const OUVERTURE = [9, 19]
  * la règle no-unused-vars du projet ne suit pas les identifiants employés en
  * JSX, et un composant rangé dans un tableau passerait pour inutilisé.
  */
+/**
+ * Les cinq familles de prestations, en français et en arabe.
+ *
+ * L'arabe n'est pas décoratif : c'est une des deux langues du pays, et le mot
+ * qu'une partie des clientes a en tête. « حمام » se lit sans traduction par
+ * qui cherche un hammam, et le détail français reste là pour les autres.
+ *
+ * Le vocabulaire suit l'usage marocain : حلاقة désigne le barbier, تصفيف
+ * الشعر la coiffure, et l'on ne cherche pas à traduire « spa ».
+ */
 const METIERS = [
-  { cle: "COIFFURE",   libelle: "Coiffure",     detail: "Coupe, couleur, coiffage" },
-  { cle: "BARBIER",    libelle: "Barbier",      detail: "Coupe homme, barbe" },
-  { cle: "ONGLERIE",   libelle: "Onglerie",     detail: "Manucure, pose" },
-  { cle: "ESTHETIQUE", libelle: "Esthétique",   detail: "Soins, épilation" },
-  { cle: "SPA",        libelle: "Hammam & spa", detail: "Gommage, massage" },
+  { cle: "COIFFURE",   libelle: "Coiffure",     arabe: "تصفيف الشعر", detail: "Coupe, couleur, coiffage" },
+  { cle: "BARBIER",    libelle: "Barbier",      arabe: "حلاقة",       detail: "Coupe homme, barbe" },
+  { cle: "ONGLERIE",   libelle: "Onglerie",     arabe: "الأظافر",     detail: "Manucure, henné" },
+  { cle: "ESTHETIQUE", libelle: "Esthétique",   arabe: "التجميل",     detail: "Soins, épilation" },
+  { cle: "SPA",        libelle: "Hammam & spa", arabe: "حمام",        detail: "Beldi, gommage, rhassoul" },
 ]
 
 const GLYPHES = {
@@ -207,7 +217,15 @@ function ApercuCreneaux({ salon }) {
         </span>
       </div>
 
-      <p className="mt-4 text-xs font-medium text-stone-400">{jourLong(apercu.date)}</p>
+      {/* La date hégirienne en second : pendant le Ramadan, c'est le repère
+          que les clients ont en tête, et les horaires des salons s'y
+          décalent entièrement. */}
+      <p className="mt-4 text-xs font-medium text-stone-400">
+        {jourLong(apercu.date)}
+        {dateHijri(apercu.date) && (
+          <span className="text-stone-300"> · {dateHijri(apercu.date)}</span>
+        )}
+      </p>
       <div className="mt-2 grid grid-cols-4 gap-2">
         {apercu.creneaux.map((c) => (
           <Link
@@ -276,7 +294,7 @@ export default function Home() {
             et ne s'efface que sous le titre, où il gênerait la lecture. */}
         <TrameZellige
           id="trame-accueil"
-          taille={72}
+          taille={132}
           className="pointer-events-none absolute inset-0 h-full w-full text-white/[0.13]"
         />
         {/* Halo chaud dans l'angle : évite l'aplat monotone sur grand écran. */}
@@ -342,7 +360,7 @@ export default function Home() {
           complement="Cinq familles de prestations, du hammam à la couleur."
         />
         <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-5 lg:gap-x-5">
-          {METIERS.map(({ cle, libelle, detail }) => {
+          {METIERS.map(({ cle, libelle, arabe, detail }) => {
             const Glyphe = GLYPHES[cle]
             return (
               <li key={cle}>
@@ -351,13 +369,24 @@ export default function Home() {
                     <Arche className="absolute inset-0" style={{ background: DEGRADES[cle] }} />
                     <TrameZellige
                       id={`trame-${cle}`}
-                      taille={34}
+                      taille={78}
                       className="pointer-events-none absolute inset-0 h-full w-full text-white/25 transition-colors duration-300 group-hover:text-white/40"
                       style={{ clipPath: "url(#arche)" }}
                     />
                     {/* Le pictogramme est centré dans le dôme, où l'arche est
                         la plus large : plus bas, la découpe le pincerait. */}
-                    <Glyphe className="absolute left-1/2 top-[38%] h-9 w-9 -translate-x-1/2 -translate-y-1/2 text-white/95 transition-transform duration-300 group-hover:scale-110" />
+                    <Glyphe className="absolute left-1/2 top-[34%] h-9 w-9 -translate-x-1/2 -translate-y-1/2 text-white/95 transition-transform duration-300 group-hover:scale-110" />
+                    {/* Le mot arabe est posé dans le dôme, sous le
+                        pictogramme : sur la couleur du métier, il se lit
+                        comme une inscription, non comme une étiquette. */}
+                    <span
+                      lang="ar"
+                      dir="rtl"
+                      className="absolute inset-x-0 top-[56%] text-center text-xl text-white"
+                      style={{ fontFamily: "var(--font-arabe)" }}
+                    >
+                      {arabe}
+                    </span>
                   </div>
                   <p className="mt-3 text-center font-semibold text-stone-900 transition group-hover:text-brand-700">
                     {libelle}
@@ -380,11 +409,11 @@ export default function Home() {
       {/* étiquettes de filtre.                                             */}
       {/* ---------------------------------------------------------------- */}
       {reseau.villes.length > 0 && (
-        <section className="relative isolate overflow-hidden border-y border-stone-200/70 bg-sable">
+        <section className="relative isolate overflow-hidden border-y border-majorelle-200/60 bg-majorelle-50">
           <TrameZellige
             id="trame-villes"
-            taille={64}
-            className="pointer-events-none absolute inset-0 h-full w-full text-brand-600/[0.06]"
+            taille={120}
+            className="pointer-events-none absolute inset-0 h-full w-full text-majorelle-600/[0.09]"
           />
           <div className="relative mx-auto max-w-6xl px-4 py-14">
             <TitreSection
@@ -398,11 +427,11 @@ export default function Home() {
                     to={`/recherche?ville=${encodeURIComponent(ville)}`}
                     className="group inline-flex items-baseline gap-2"
                   >
-                    <span className="font-titre text-2xl font-semibold text-stone-900 decoration-brand-400 decoration-2 underline-offset-[6px] transition group-hover:text-brand-700 group-hover:underline sm:text-3xl">
+                    <span className="font-titre text-2xl font-semibold text-stone-900 decoration-majorelle-500 decoration-2 underline-offset-[6px] transition group-hover:text-majorelle-700 group-hover:underline sm:text-3xl">
                       {ville}
                     </span>
                     {reseau.complet && (
-                      <span className="text-sm tabular-nums text-stone-400 transition group-hover:text-brand-500">
+                      <span className="text-sm tabular-nums text-stone-400 transition group-hover:text-majorelle-600">
                         {parVille(ville)}
                       </span>
                     )}
@@ -438,7 +467,7 @@ export default function Home() {
       {/* traits nus sur du blanc ne retenaient pas l'œil, et la forme      */}
       {/* rappelle la colonnade des métiers plus haut.                      */}
       {/* ---------------------------------------------------------------- */}
-      <section className="border-y border-stone-200/70 bg-sable">
+      <section className="border-y border-safran-100 bg-safran-50">
         <div className="mx-auto max-w-6xl px-4 py-14">
           <div className="grid gap-8 sm:grid-cols-3 sm:gap-10">
             {PROMESSES.map(({ glyphe, titre, texte }) => {
@@ -448,7 +477,7 @@ export default function Home() {
                   <div className="relative isolate h-14 w-11">
                     <Arche
                       className="absolute inset-0"
-                      style={{ background: "linear-gradient(150deg, #8b3244, #c2566a)" }}
+                      style={{ background: "linear-gradient(150deg, #8f6015, #d99a2b)" }}
                     />
                     <Glyphe className="absolute left-1/2 top-[42%] h-5 w-5 -translate-x-1/2 -translate-y-1/2 text-white" />
                   </div>
@@ -468,7 +497,7 @@ export default function Home() {
         <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-brand-700 px-8 py-12 sm:px-12">
           <TrameZellige
             id="trame-pro"
-            taille={72}
+            taille={132}
             className="pointer-events-none absolute inset-0 h-full w-full text-white/25"
             style={{
               maskImage: "radial-gradient(90% 120% at 100% 50%, #000 10%, transparent 65%)",

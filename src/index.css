@@ -69,6 +69,26 @@
   --color-brand-800: #6f2837;
   --color-brand-900: #4d1c27;
 
+  /* ---- Bleu Majorelle ----
+     Le bleu du jardin de Marrakech et des ruelles de Chefchaouen. Il porte
+     la section des villes : le bordeaux seul rendait chaque bande de la page
+     interchangeable, et un lieu se signale mieux par sa propre couleur. */
+  --color-majorelle-50:  #eef2fb;
+  --color-majorelle-100: #dce4f7;
+  --color-majorelle-200: #b9c8ef;
+  --color-majorelle-500: #3f5cc4;
+  --color-majorelle-600: #2f47a8;
+  --color-majorelle-700: #26397f;
+
+  /* ---- Safran ----
+     L'ocre des murs de Marrakech et de l'épice. Porte les bénéfices client,
+     là où le bordeaux de la marque n'a rien à dire de particulier. */
+  --color-safran-50:  #fdf6ec;
+  --color-safran-100: #faeacf;
+  --color-safran-500: #d99a2b;
+  --color-safran-600: #b87d1c;
+  --color-safran-700: #8f6015;
+
   /* ---- Second accent ----
      Un vert-de-gris de zellige, pour les états positifs et les catégories.
      Le bordeaux seul rendait chaque écran monochrome. */
@@ -92,6 +112,9 @@
      lisibilité passe avant l'allure — prix, horaires, formulaires. */
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-titre: "Fraunces Variable", "Fraunces", Georgia, serif;
+  /* Aucune police arabe n'est embarquée : celles du système suffisent pour
+     quelques mots, là où une famille complète coûterait cent kilo-octets. */
+  --font-arabe: "Geeza Pro", "Segoe UI", "Noto Naskh Arabic", "Arabic Typesetting", serif;
 
   /* Ombres portées teintées de bordeaux plutôt que de noir : une ombre noire
      sur un fond ivoire se voit comme une salissure. */

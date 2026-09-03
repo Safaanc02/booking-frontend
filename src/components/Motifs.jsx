@@ -10,36 +10,53 @@
  * visuel des lieux dont ce site parle, et il ne coûte que deux rectangles.
  */
 
-/** Une étoile à huit branches, en deux carrés. */
-const etoile = (cx, cy, cote, cle) => {
-  const x = cx - cote / 2
-  const y = cy - cote / 2
-  return (
-    <g key={cle}>
-      <rect x={x} y={y} width={cote} height={cote} rx={cote * 0.06} />
-      <rect x={x} y={y} width={cote} height={cote} rx={cote * 0.06}
-            transform={`rotate(45 ${cx} ${cy})`} />
-    </g>
-  )
+/**
+ * Étoile à N branches, sommets alternés sur deux rayons.
+ *
+ * Un polygone et non deux carrés superposés. Les deux carrés donnaient un
+ * octogone à angles droits — géométrique, mais plat : ce qui manquait était
+ * la pointe. Le khatem du zellige est une étoile pointue, et c'est cette
+ * pointe qu'on reconnaît.
+ */
+const etoile = (cx, cy, rExt, rInt, branches, cle) => {
+  const points = []
+  for (let i = 0; i < branches * 2; i++) {
+    const a = (Math.PI * i) / branches - Math.PI / 2
+    const r = i % 2 === 0 ? rExt : rInt
+    points.push(`${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`)
+  }
+  return <polygon key={cle} points={points.join(" ")} />
 }
 
 /**
- * Trame de zellige, en fond.
+ * Trame de zellige.
  *
- * Les étoiles des quatre coins sont volontairement coupées par la tuile :
- * c'est ce qui fait que le motif se raccorde sans couture quand le navigateur
- * le répète.
+ * Grandes étoiles aux nœuds du réseau, petites en quinconce entre elles.
+ * C'est l'alternance du zellige marocain, et non une simple répétition : une
+ * seule taille d'étoile donne un papier peint, deux tailles imbriquées
+ * donnent un entrelacs.
+ *
+ * Les étoiles des bords sont volontairement coupées par la tuile : c'est ce
+ * qui fait que le motif se raccorde sans couture quand le navigateur le
+ * répète.
  */
-export function TrameZellige({ id, taille = 64, className = "", style }) {
-  const c = taille / 2
-  const cote = taille * 0.42
+export function TrameZellige({ id, taille = 120, className = "", style }) {
+  const t = taille
+  const c = t / 2
+  // Proportions fixées sur la tuile : le motif garde le même dessin à
+  // n'importe quelle échelle, seule sa densité change.
+  const gExt = t * 0.30, gInt = t * 0.125
+  const pExt = t * 0.125, pInt = t * 0.058
+
   return (
     <svg aria-hidden className={className} style={style}>
       <defs>
-        <pattern id={id} width={taille} height={taille} patternUnits="userSpaceOnUse">
-          <g fill="none" stroke="currentColor" strokeWidth="1">
-            {[[0, 0], [taille, 0], [0, taille], [taille, taille], [c, c]]
-              .map(([x, y], i) => etoile(x, y, cote, i))}
+        <pattern id={id} width={t} height={t} patternUnits="userSpaceOnUse">
+          <g fill="none" stroke="currentColor" strokeWidth="1.2">
+            {[[0, 0], [t, 0], [0, t], [t, t], [c, c]]
+              .map(([x, y], i) => etoile(x, y, gExt, gInt, 8, `g${i}`))}
+            {[[c, 0], [0, c], [t, c], [c, t]]
+              .map(([x, y], i) => etoile(x, y, pExt, pInt, 8, `p${i}`))}
           </g>
         </pattern>
       </defs>
@@ -77,7 +94,7 @@ export function FriseZellige({ id, className = "", hauteur = "h-6" }) {
     <div className={`relative overflow-hidden ${hauteur} ${className}`}>
       <TrameZellige
         id={id}
-        taille={24}
+        taille={44}
         className="absolute inset-0 h-full w-full"
       />
     </div>
