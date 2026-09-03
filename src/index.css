@@ -112,9 +112,6 @@
      lisibilité passe avant l'allure — prix, horaires, formulaires. */
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-titre: "Fraunces Variable", "Fraunces", Georgia, serif;
-  /* Aucune police arabe n'est embarquée : celles du système suffisent pour
-     quelques mots, là où une famille complète coûterait cent kilo-octets. */
-  --font-arabe: "Geeza Pro", "Segoe UI", "Noto Naskh Arabic", "Arabic Typesetting", serif;
 
   /* Ombres portées teintées de bordeaux plutôt que de noir : une ombre noire
      sur un fond ivoire se voit comme une salissure. */

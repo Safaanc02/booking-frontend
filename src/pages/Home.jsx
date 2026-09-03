@@ -23,21 +23,17 @@ const OUVERTURE = [9, 19]
  * JSX, et un composant rangé dans un tableau passerait pour inutilisé.
  */
 /**
- * Les cinq familles de prestations, en français et en arabe.
+ * Les cinq familles de prestations.
  *
- * L'arabe n'est pas décoratif : c'est une des deux langues du pays, et le mot
- * qu'une partie des clientes a en tête. « حمام » se lit sans traduction par
- * qui cherche un hammam, et le détail français reste là pour les autres.
- *
- * Le vocabulaire suit l'usage marocain : حلاقة désigne le barbier, تصفيف
- * الشعر la coiffure, et l'on ne cherche pas à traduire « spa ».
+ * Le détail cite ce qu'on y fait vraiment — beldi, rhassoul, henné — plutôt
+ * qu'un vocabulaire de catalogue générique.
  */
 const METIERS = [
-  { cle: "COIFFURE",   libelle: "Coiffure",     arabe: "تصفيف الشعر", detail: "Coupe, couleur, coiffage" },
-  { cle: "BARBIER",    libelle: "Barbier",      arabe: "حلاقة",       detail: "Coupe homme, barbe" },
-  { cle: "ONGLERIE",   libelle: "Onglerie",     arabe: "الأظافر",     detail: "Manucure, henné" },
-  { cle: "ESTHETIQUE", libelle: "Esthétique",   arabe: "التجميل",     detail: "Soins, épilation" },
-  { cle: "SPA",        libelle: "Hammam & spa", arabe: "حمام",        detail: "Beldi, gommage, rhassoul" },
+  { cle: "COIFFURE",   libelle: "Coiffure",     detail: "Coupe, couleur, coiffage" },
+  { cle: "BARBIER",    libelle: "Barbier",      detail: "Coupe homme, barbe" },
+  { cle: "ONGLERIE",   libelle: "Onglerie",     detail: "Manucure, henné" },
+  { cle: "ESTHETIQUE", libelle: "Esthétique",   detail: "Soins, épilation" },
+  { cle: "SPA",        libelle: "Hammam & spa", detail: "Beldi, gommage, rhassoul" },
 ]
 
 const GLYPHES = {
@@ -360,7 +356,7 @@ export default function Home() {
           complement="Cinq familles de prestations, du hammam à la couleur."
         />
         <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-5 lg:gap-x-5">
-          {METIERS.map(({ cle, libelle, arabe, detail }) => {
+          {METIERS.map(({ cle, libelle, detail }) => {
             const Glyphe = GLYPHES[cle]
             return (
               <li key={cle}>
@@ -375,18 +371,9 @@ export default function Home() {
                     />
                     {/* Le pictogramme est centré dans le dôme, où l'arche est
                         la plus large : plus bas, la découpe le pincerait. */}
-                    <Glyphe className="absolute left-1/2 top-[34%] h-9 w-9 -translate-x-1/2 -translate-y-1/2 text-white/95 transition-transform duration-300 group-hover:scale-110" />
-                    {/* Le mot arabe est posé dans le dôme, sous le
-                        pictogramme : sur la couleur du métier, il se lit
-                        comme une inscription, non comme une étiquette. */}
-                    <span
-                      lang="ar"
-                      dir="rtl"
-                      className="absolute inset-x-0 top-[56%] text-center text-xl text-white"
-                      style={{ fontFamily: "var(--font-arabe)" }}
-                    >
-                      {arabe}
-                    </span>
+                    {/* Centré dans le dôme, où l'arche est la plus large :
+                        plus bas, la découpe le pincerait. */}
+                    <Glyphe className="absolute left-1/2 top-[40%] h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-white/95 transition-transform duration-300 group-hover:scale-110" />
                   </div>
                   <p className="mt-3 text-center font-semibold text-stone-900 transition group-hover:text-brand-700">
                     {libelle}
