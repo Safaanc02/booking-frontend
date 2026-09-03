@@ -289,7 +289,17 @@ console.log(' ', ok(note !== null), note ? `note affichée : ${note.moyenne} sur
 // On cherche par le nom du salon : sa ville dépend du jeu de données.
 await page.goto(`${BASE}/recherche?q=${encodeURIComponent(rdv.salonNom)}`, { waitUntil: 'networkidle0' })
 await attendre('salon')
-const noteListe = await page.evaluate(() => /★\s*[\d,]+\s*·\s*\d+ avis/.test(document.body.innerText))
+/*
+ * On vérifie que la note est là, pas la façon de l'écrire.
+ *
+ * La version précédente exigeait « ★ 4,1 · 8 avis ». La carte de résultats
+ * affiche désormais « ★ 4,1 (8) », plus compact — et le test a échoué sur un
+ * changement de présentation parfaitement voulu, en laissant croire à une
+ * régression. Une assertion qui épingle la typographie contredit le premier
+ * remaniement graphique.
+ */
+const noteListe = await page.evaluate(() =>
+  /★\s*[\d,]+\s*(?:\(\d+\)|·\s*\d+\s*avis)/.test(document.body.innerText))
 console.log(' ', ok(noteListe), 'note visible dès la liste de résultats')
 
 console.log('\n─── Le salon répond ────────────────────────────────')

@@ -1,16 +1,126 @@
+/*
+ * Fondations visuelles.
+ *
+ * Les polices sont servies par l'application, non par un service tiers : un
+ * appel à des polices hébergées ailleurs transmet l'adresse IP de chaque
+ * visiteur à l'étranger, ce qui n'est pas rien pour un produit marocain
+ * soumis à la loi 09-08. C'est aussi plus rapide — pas de résolution DNS ni
+ * de connexion supplémentaire.
+ *
+ * Inter était déjà déclarée dans les jetons, mais n'avait jamais été chargée :
+ * tout le site s'affichait dans la police du système, différente d'une machine
+ * à l'autre. Le choix typographique était donc accidentel.
+ */
 @import "tailwindcss";
 
+/*
+ * Déclarations écrites à la main plutôt que l'import global du paquet.
+ *
+ * Celui-ci embarquait cyrillique, grec et vietnamien : 95 Ko qu'aucun
+ * visiteur marocain ne lira jamais, sur un marché qui se consulte largement
+ * en 4G. La plage ci-dessous est le sous-ensemble « latin » de Google, qui
+ * couvre le français en entier — œ compris, en U+0152-0153 — ainsi que
+ * l'apostrophe typographique.
+ *
+ * Variante « standard » pour Fraunces : graisse et taille optique, les deux
+ * axes que le CSS pilote nativement. Le fichier « full » y ajoute SOFT et
+ * WONK pour 52 Ko de plus — un adoucissement d'empattements que personne ne
+ * remarquera, au prix d'une demi-seconde sur une connexion mobile.
+ *
+ * font-display: swap — le texte s'affiche tout de suite dans la police de
+ * repli, puis bascule. Mieux vaut un titre provisoirement en Georgia qu'une
+ * page blanche.
+ */
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Fraunces Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/fraunces/files/fraunces-latin-standard-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @theme {
+  /* ---- Marque ----
+     Bordeaux profond, emprunté aux tapis et aux babouches plutôt qu'aux
+     roses des applications de beauté. Les deux extrémités sont ajoutées :
+     la 800 pour les fonds pleins, la 300 pour les surfaces teintées. */
   --color-brand-50:  #fdf3f4;
   --color-brand-100: #fbe8ea;
   --color-brand-200: #f6d0d6;
+  --color-brand-300: #eeaab5;
   --color-brand-400: #d98693;
   --color-brand-500: #c2566a;
   --color-brand-600: #a83f54;
   --color-brand-700: #8b3244;
+  --color-brand-800: #6f2837;
+  --color-brand-900: #4d1c27;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* ---- Second accent ----
+     Un vert-de-gris de zellige, pour les états positifs et les catégories.
+     Le bordeaux seul rendait chaque écran monochrome. */
+  --color-jade-50:  #f0f7f5;
+  --color-jade-100: #dbece7;
+  --color-jade-400: #6fa79a;
+  --color-jade-600: #3f7d70;
+  --color-jade-700: #326358;
+
+  /* ---- Fonds ----
+     Ivoire tiède et non gris : le stone-50 de Tailwind tire vers le froid,
+     et c'est ce qui donnait cet air de gabarit non fini. La valeur est celle
+     du thème de connexion Keycloak, pour que les deux ne se contredisent pas. */
+  --color-ivoire: #faf9f7;
+  --color-sable:  #f4f1ec;
+
+  /* ---- Typographie ----
+     Deux familles, deux rôles. Fraunces porte les titres : ses formes douces
+     et son fort contraste donnent un caractère que la grotesque n'a pas, sans
+     tomber dans le faire-part de mariage. Inter porte tout le reste, où la
+     lisibilité passe avant l'allure — prix, horaires, formulaires. */
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-titre: "Fraunces Variable", "Fraunces", Georgia, serif;
+
+  /* Ombres portées teintées de bordeaux plutôt que de noir : une ombre noire
+     sur un fond ivoire se voit comme une salissure. */
+  --shadow-carte: 0 1px 2px 0 rgb(109 40 55 / 0.04), 0 4px 16px -4px rgb(109 40 55 / 0.08);
+  --shadow-carte-levee: 0 2px 4px 0 rgb(109 40 55 / 0.06), 0 12px 32px -8px rgb(109 40 55 / 0.14);
 }
 
 html { -webkit-text-size-adjust: 100%; }
-body { @apply bg-stone-50 text-stone-900 antialiased; }
+
+body {
+  @apply bg-ivoire text-stone-900 antialiased;
+}
+
+/*
+ * Les titres prennent la police d'affichage par défaut.
+ *
+ * Posé ici plutôt que répété sur chaque composant : un titre qui aurait
+ * oublié la classe se serait affiché en grotesque au milieu des autres, et
+ * ce genre d'écart ne se remarque qu'une fois en ligne.
+ *
+ */
+h1, h2, h3 {
+  font-family: var(--font-titre);
+  /* La taille optique suit la taille de rendu : Fraunces durcit ses
+     empattements aux petits corps et les affine aux grands, ce qui évite des
+     titres de section qui pèsent plus lourd que le titre de page. */
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
+}
+
+/* Les chiffres des prix, horaires et notes s'alignent en colonne. */
+.tabular-nums { font-variant-numeric: tabular-nums; }
