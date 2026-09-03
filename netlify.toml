@@ -1,0 +1,28 @@
+# Hébergement Netlify.
+#
+# Un seul réglage compte vraiment : la réécriture. Cette application est une
+# page unique dont le routage se fait dans le navigateur — /salon/12,
+# /professionnels, /annuler… ne correspondent à aucun fichier. Sans la règle
+# ci-dessous, l'hébergeur cherche le fichier, ne le trouve pas et renvoie 404.
+#
+# Le cas qui ne pardonne pas est le lien d'annulation envoyé par e-mail : il
+# arrive toujours en chargement direct, sur une adresse jamais visitée. C'est
+# précisément celui qu'une absence de réécriture casse en silence.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Les fichiers réels sont servis en priorité : dist/assets/* et
+# silent-check-sso.html ne passent pas par cette règle.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Les noms de fichiers portent une empreinte : ils ne changent jamais de
+# contenu, et peuvent donc être gardés indéfiniment.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
