@@ -192,11 +192,21 @@ const brancher = (p) => {
 brancher(page)
 
 const txtDe = (p) => p.evaluate(() => document.body.innerText)
+/*
+ * Délai d'attente par défaut des aides ci-dessous.
+ *
+ * Relevé de 15 à 25 secondes : à travers un tunnel, chaque requête coûte un
+ * aller-retour hors du réseau local, et la vérification de session initiale
+ * dépassait la fenêtre. Un test qui patiente ne coûte du temps que lorsque
+ * quelque chose est réellement cassé.
+ */
+const ATTENTE = 25000
+
 const txt = () => txtDe(page)
 const contient = (s, a) => s.toLocaleLowerCase('fr').includes(a.toLocaleLowerCase('fr'))
 const pause = (ms) => new Promise((r) => setTimeout(r, ms))
 
-const attendreSur = async (p, attendu, timeout = 15000) => {
+const attendreSur = async (p, attendu, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   while (Date.now() < limite) {
     if (contient(await txtDe(p), attendu)) return true
@@ -206,7 +216,7 @@ const attendreSur = async (p, attendu, timeout = 15000) => {
 }
 const attendre = (attendu, timeout) => attendreSur(page, attendu, timeout)
 
-const clicSur = async (p, filtre, timeout = 15000) => {
+const clicSur = async (p, filtre, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   let fait = false
   while (Date.now() < limite && !fait) {

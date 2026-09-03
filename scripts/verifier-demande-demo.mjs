@@ -90,9 +90,19 @@ page.on('console', (m) => {
   if (!/Failed to load resource|net::ERR_/.test(t)) erreurs.push(t)
 })
 
+/*
+ * Délai d'attente par défaut des aides ci-dessous.
+ *
+ * Relevé de 15 à 25 secondes : à travers un tunnel, chaque requête coûte un
+ * aller-retour hors du réseau local, et la vérification de session initiale
+ * dépassait la fenêtre. Un test qui patiente ne coûte du temps que lorsque
+ * quelque chose est réellement cassé.
+ */
+const ATTENTE = 25000
+
 const txt = () => page.evaluate(() => document.body.innerText)
 const contient = (s, a) => s.toLocaleLowerCase('fr').includes(a.toLocaleLowerCase('fr'))
-const attendre = async (attendu, timeout = 15000) => {
+const attendre = async (attendu, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   while (Date.now() < limite) {
     if (contient(await txt(), attendu)) return true
@@ -100,7 +110,7 @@ const attendre = async (attendu, timeout = 15000) => {
   }
   return false
 }
-const clic = async (filtre, timeout = 15000) => {
+const clic = async (filtre, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   let fait = false
   while (Date.now() < limite && !fait) {
@@ -136,7 +146,7 @@ const remplir = (libelle, valeur) => page.evaluate(([l, v]) => {
  * à une autre ligne. Le test pilotait ainsi la demande de quelqu'un d'autre —
  * en concluant à tort que le produit était en défaut.
  */
-const clicDansDemande = async (id, libelle, timeout = 15000) => {
+const clicDansDemande = async (id, libelle, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   let fait = false
   while (Date.now() < limite && !fait) {
@@ -156,7 +166,7 @@ const clicDansDemande = async (id, libelle, timeout = 15000) => {
   await pause(400)
 }
 
-const attendreDemande = async (id, timeout = 15000) => {
+const attendreDemande = async (id, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   while (Date.now() < limite) {
     if (await page.$(`[data-demande-id="${id}"]`)) return true

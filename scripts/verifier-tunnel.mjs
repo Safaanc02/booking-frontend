@@ -109,6 +109,16 @@ brancher(page)
 
 const pause = (ms) => new Promise((r) => setTimeout(r, ms))
 const txtDe = (p) => p.evaluate(() => document.body.innerText)
+/*
+ * Délai d'attente par défaut des aides ci-dessous.
+ *
+ * Relevé de 15 à 25 secondes : à travers un tunnel, chaque requête coûte un
+ * aller-retour hors du réseau local, et la vérification de session initiale
+ * dépassait la fenêtre. Un test qui patiente ne coûte du temps que lorsque
+ * quelque chose est réellement cassé.
+ */
+const ATTENTE = 25000
+
 const txt = () => txtDe(page)
 /**
  * Comparaison insensible à la casse et aux accents.
@@ -125,7 +135,7 @@ const contient = (source, attendu) =>
  * peu lente (Vite qui retransforme après une modification) suffisait à faire
  * échouer l'étape 1 alors que l'application était correcte.
  */
-const attendreSur = async (p, attendu, timeout = 15000) => {
+const attendreSur = async (p, attendu, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   while (Date.now() < limite) {
     if (contient(await txtDe(p), attendu)) return true
@@ -136,7 +146,7 @@ const attendreSur = async (p, attendu, timeout = 15000) => {
 const attendre = (attendu, timeout) => attendreSur(page, attendu, timeout)
 
 /** Attend que des créneaux horaires soient rendus, et les renvoie. */
-const attendreCreneaux = async (timeout = 15000) => {
+const attendreCreneaux = async (timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   while (Date.now() < limite) {
     const c = await page.evaluate(() =>
@@ -153,7 +163,7 @@ const attendreCreneaux = async (timeout = 15000) => {
  * page se recale entre le scroll et le clic — ce qui donne un faux négatif
  * silencieux : aucune erreur, aucune requête.
  */
-const clicSur = async (p, filtre, timeout = 15000) => {
+const clicSur = async (p, filtre, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   let fait = false
   while (Date.now() < limite && !fait) {
@@ -181,9 +191,13 @@ console.log(' ', ok(t.includes('200,00') && t.includes('650,00')), 'prix en MAD'
 console.log('\n─── Étape 2 : choix du praticien ───────────────────')
 await clic('Coupe femme')
 console.log(' ', ok(await attendre('Avec qui')), 'titre affiché')
+// La liste des praticiens est demandée à l'API : elle arrive après le titre.
+// Lue au vol, elle manquait dès que la latence dépassait quelques
+// millisecondes — c'est-à-dire dès qu'on sortait de la machine.
+const praticiens = (await attendre('Sofia')) && (await attendre('Youssef'))
 t = await txt()
 console.log(' ', ok(t.includes('Sans préférence')), '« sans préférence » proposé par défaut')
-console.log(' ', ok(t.includes('Sofia') && t.includes('Youssef')), 'les 2 praticiens de la coupe')
+console.log(' ', ok(praticiens), 'les 2 praticiens de la coupe')
 
 console.log('\n─── Étape 3 : choix du créneau ─────────────────────')
 await clic('Sans préférence')

@@ -86,10 +86,20 @@ page.on('console', (m) => {
   if (!/Failed to load resource|net::ERR_/.test(t)) erreurs.push(t)
 })
 
+/*
+ * Délai d'attente par défaut des aides ci-dessous.
+ *
+ * Relevé de 15 à 25 secondes : à travers un tunnel, chaque requête coûte un
+ * aller-retour hors du réseau local, et la vérification de session initiale
+ * dépassait la fenêtre. Un test qui patiente ne coûte du temps que lorsque
+ * quelque chose est réellement cassé.
+ */
+const ATTENTE = 25000
+
 const txt = () => page.evaluate(() => document.body.innerText)
 const contient = (s, a) => s.toLocaleLowerCase('fr').includes(a.toLocaleLowerCase('fr'))
 
-const attendre = async (attendu, timeout = 15000) => {
+const attendre = async (attendu, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   while (Date.now() < limite) {
     if (contient(await txt(), attendu)) return true
@@ -98,7 +108,7 @@ const attendre = async (attendu, timeout = 15000) => {
   return false
 }
 
-const clic = async (filtre, timeout = 15000) => {
+const clic = async (filtre, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   let fait = false
   while (Date.now() < limite && !fait) {
@@ -258,8 +268,17 @@ await Promise.all([
   gerant.evaluate(() => [...document.querySelectorAll('a')]
     .find((a) => /continuer/i.test(a.innerText) && !/kc_locale/.test(a.href))?.click()),
 ])
-await pause(800)
-dire(await gerant.$('#password-new') !== null, 'le choix du mot de passe est atteint')
+/*
+ * waitForSelector, et non une interrogation immédiate du DOM.
+ *
+ * Le clic déclenche une navigation. Une pause fixe suffisait en local ; avec
+ * la latence d'un tunnel, la page changeait encore au moment de la question
+ * et Puppeteer levait « Execution context was destroyed », interrompant la
+ * suite au milieu. waitForSelector traverse la navigation.
+ */
+const atteint = await gerant.waitForSelector('#password-new', { timeout: 25000 })
+  .then(() => true).catch(() => false)
+dire(atteint, 'le choix du mot de passe est atteint')
 const accueil = await txtG()
 dire(contient(accueil, 'mot de passe') && !contient(accueil, 'password'),
   'le formulaire est en français')
@@ -305,8 +324,8 @@ const limite = Date.now() + 20000
 let formulaire = null
 let dedans = false
 while (Date.now() < limite && !formulaire && !dedans) {
-  formulaire = await gerant.$('#username')
-  dedans = contient(await txtG(), SALON)
+  formulaire = await gerant.$('#username').catch(() => null)
+  dedans = contient(await txtG().catch(() => ''), SALON)
   if (!formulaire && !dedans) await pause(200)
 }
 

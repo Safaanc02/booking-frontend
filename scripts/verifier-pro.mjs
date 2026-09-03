@@ -132,10 +132,20 @@ const brancher = (p) => {
 }
 brancher(page)
 
+/*
+ * Délai d'attente par défaut des aides ci-dessous.
+ *
+ * Relevé de 15 à 25 secondes : à travers un tunnel, chaque requête coûte un
+ * aller-retour hors du réseau local, et la vérification de session initiale
+ * dépassait la fenêtre. Un test qui patiente ne coûte du temps que lorsque
+ * quelque chose est réellement cassé.
+ */
+const ATTENTE = 25000
+
 const txt = () => page.evaluate(() => document.body.innerText)
 const contient = (s, a) => s.toLocaleLowerCase('fr').includes(a.toLocaleLowerCase('fr'))
 
-const attendre = async (attendu, timeout = 15000) => {
+const attendre = async (attendu, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   while (Date.now() < limite) {
     if (contient(await txt(), attendu)) return true
@@ -145,7 +155,7 @@ const attendre = async (attendu, timeout = 15000) => {
 }
 
 /** Clic déclenché depuis le DOM : la souris rate la cible quand la page se recale. */
-const clic = async (filtre, timeout = 15000) => {
+const clic = async (filtre, timeout = ATTENTE) => {
   const limite = Date.now() + timeout
   let fait = false
   while (Date.now() < limite && !fait) {

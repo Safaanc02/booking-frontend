@@ -68,6 +68,15 @@ page.on('console', (m) => {
   if (!/Failed to load resource|net::ERR_/.test(t)) erreurs.push(t)
 })
 
+/*
+ * Délai d'attente par défaut des aides ci-dessous.
+ *
+ * 25 secondes : à travers un tunnel, chaque requête coûte un aller-retour
+ * hors du réseau local. Un test qui patiente ne coûte du temps que lorsque
+ * quelque chose est réellement cassé.
+ */
+const ATTENTE = 25000
+
 const txt = () => page.evaluate(() => document.body.innerText)
 const contient = (s, a) => s.toLocaleLowerCase('fr').includes(a.toLocaleLowerCase('fr'))
 
