@@ -2,6 +2,8 @@ import { Link } from "react-router-dom"
 import { prix as formatPrix } from "../lib/format"
 import { libelleMetier, metiersDuSalon } from "../lib/metiers"
 import Couverture from "./Couverture"
+import { Boussole } from "./Glyphes"
+import { distanceLisible } from "../lib/geolocalisation"
 
 /**
  * Carte d'un salon dans une liste de résultats.
@@ -46,6 +48,9 @@ export default function SalonCard({ salon, villeFiltree = false, metierFiltre = 
     ? [metierFiltre, ...tous.filter((m) => m !== metierFiltre)]
     : tous
   const lieu = [salon.quartier, villeFiltree ? null : salon.ville].filter(Boolean).join(" · ")
+  // Nulle hors d'une recherche par proximité : un salon n'a pas de distance
+  // dans l'absolu.
+  const distance = distanceLisible(salon.distanceKm)
 
   return (
     <Link
@@ -66,6 +71,15 @@ export default function SalonCard({ salon, villeFiltree = false, metierFiltre = 
             <span className="font-medium text-stone-500">Nouveau</span>
           )}
         </span>
+        {distance && (
+          /* En haut à droite, en miroir de la note : dans une liste classée
+             par distance, c'est l'information qu'on relit de carte en carte,
+             et elle doit tomber toujours au même endroit. */
+          <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-stone-900 shadow-sm backdrop-blur">
+            <Boussole className="h-3.5 w-3.5 text-brand-600" />
+            <span className="tabular-nums">{distance}</span>
+          </span>
+        )}
         <span className="absolute bottom-3 left-3 flex flex-wrap gap-1">
           {metiers.slice(0, 2).map((m) => (
             <span

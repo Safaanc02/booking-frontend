@@ -9,18 +9,32 @@ export const publicApi = {
    * L'interface le faisait sur la page reçue, si bien qu'un filtre ne voyait
    * que les vingt premiers résultats.
    */
-  rechercherSalons: ({ ville, q, metier, page = 0, size = 20 } = {}) =>
+  rechercherSalons: ({ ville, q, metier, lat, lng, rayon, page = 0, size = 20 } = {}) =>
     client
       .get("/api/public/salons", {
         params: {
           ville: ville || undefined,
           q: q || undefined,
           metier: metier || undefined,
+          // Les deux ensemble : le serveur refuse une coordonnée seule, qui ne
+          // situe rien. Envoyer l'une sans l'autre rendrait 400 au lieu d'une
+          // recherche ordinaire.
+          lat: lat != null && lng != null ? lat : undefined,
+          lng: lat != null && lng != null ? lng : undefined,
+          rayon: lat != null && lng != null ? rayon || undefined : undefined,
           page,
           size,
         },
       })
-      .then((r) => r.data),
+      // nonSitues voyage dans un en-tête et non dans le corps : le corps est
+      // une page Spring, dont la forme est fixée. Ce nombre compte les salons
+      // qui répondent aux critères mais qu'aucun repère ne situe — ils sont
+      // absents du classement par distance, et l'interface le dit plutôt que
+      // de les faire disparaître.
+      .then((r) => ({
+        ...r.data,
+        nonSitues: Number(r.headers["x-salons-non-situes"] ?? 0) || 0,
+      })),
 
   ficheSalon: (id) => client.get(`/api/public/salons/${id}`).then((r) => r.data),
 

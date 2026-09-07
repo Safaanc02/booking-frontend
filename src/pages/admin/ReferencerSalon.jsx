@@ -2,9 +2,10 @@ import { useState } from "react"
 import { adminApi } from "../../api/bookingApi"
 import { Champ } from "../pro/ProDashboard"
 import { ORDRE_METIERS, libelleMetier } from "../../lib/metiers"
+import { analyserCoordonnees } from "../../lib/geolocalisation"
 
 const VIDE = {
-  nom: "", ville: "", quartier: "", adresse: "", telephone: "", email: "",
+  nom: "", ville: "", quartier: "", adresse: "", coordonnees: "", telephone: "", email: "",
   categorie: "COIFFURE", metiers: ["COIFFURE"], delaiAnnulationHeures: "24",
   gerantPrenom: "", gerantNom: "", gerantEmail: "", gerantTelephone: "",
   validerImmediatement: true,
@@ -65,6 +66,7 @@ export default function ReferencerSalon({ demande }) {
   const [form, setForm] = useState(() => depuisDemande(demande))
   const [envoi, setEnvoi] = useState({ enCours: false, erreur: null })
   const [resultat, setResultat] = useState(null)
+  const [erreurPoint, setErreurPoint] = useState(null)
 
   const maj = (cle) => (e) => setForm({ ...form, [cle]: e.target.value })
   const champs = envoi.erreur?.details ?? {}
@@ -85,6 +87,24 @@ export default function ReferencerSalon({ demande }) {
 
   const soumettre = (e) => {
     e.preventDefault()
+
+    /*
+     * Les coordonnées sont lues avant tout appel.
+     *
+     * Une paire mal collée doit s'afficher sous son champ, et non revenir en
+     * erreur de validation du serveur au milieu d'un formulaire de vingt
+     * lignes. Le message dit quoi vérifier — l'ordre latitude/longitude, la
+     * faute qu'on ne voit pas après coup.
+     */
+    let point
+    try {
+      point = analyserCoordonnees(form.coordonnees)
+      setErreurPoint(null)
+    } catch (erreur) {
+      setErreurPoint(erreur.message)
+      return
+    }
+
     setEnvoi({ enCours: true, erreur: null })
     setResultat(null)
     adminApi
@@ -92,6 +112,7 @@ export default function ReferencerSalon({ demande }) {
         salon: {
           nom: form.nom, ville: form.ville, quartier: form.quartier || null,
           adresse: form.adresse, telephone: form.telephone,
+          latitude: point?.lat ?? null, longitude: point?.lng ?? null,
           email: form.email || null, categorie: form.categorie,
           delaiAnnulationHeures: Number(form.delaiAnnulationHeures),
         },
@@ -150,6 +171,24 @@ export default function ReferencerSalon({ demande }) {
             <Champ label="Ville" value={form.ville} onChange={maj("ville")} erreur={champs["salon.ville"]} required />
             <Champ label="Adresse" value={form.adresse} onChange={maj("adresse")} erreur={champs["salon.adresse"]} required className="sm:col-span-2" />
             <Champ label="Quartier" value={form.quartier} onChange={maj("quartier")} placeholder="Guéliz, Maarif…" />
+            {/* Après le quartier : c'est la même information, en plus précise.
+                Laissé vide, le salon est placé au centre de son quartier — ce
+                qui suffit à le classer parmi les salons de sa ville. */}
+            <div className="sm:col-span-2">
+              <Champ
+                label="Coordonnées GPS (facultatif)"
+                value={form.coordonnees}
+                onChange={maj("coordonnees")}
+                erreur={erreurPoint}
+                placeholder="33.5883, -7.6222"
+              />
+              <p className="mt-1 text-xs text-stone-500">
+                Sur Google Maps, clic droit sur le salon puis clic sur les deux nombres
+                pour les copier. Sans coordonnées, le salon est situé au centre de son
+                quartier — assez pour apparaître dans « salons autour de moi », au
+                quartier près.
+              </p>
+            </div>
             <Champ label="Téléphone du salon" value={form.telephone} onChange={maj("telephone")}
                    erreur={champs["salon.telephone"]} placeholder="0539112233" required />
             <Champ label="E-mail du salon" type="email" value={form.email} onChange={maj("email")} erreur={champs["salon.email"]} />

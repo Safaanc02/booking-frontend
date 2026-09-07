@@ -55,6 +55,10 @@ const ok = (c) => (c ? '✅' : '❌')
 /* Un identifiant par exécution : le script doit pouvoir tourner deux fois. */
 const SUFFIXE = Date.now().toString().slice(-6)
 const SALON = `Studio Yasmine ${SUFFIXE}`
+/** Point relevé pour le salon référencé : Malabata, Tanger. */
+const POINT_RELEVE = { lat: 35.7912, lng: -5.7789 }
+/** Le repère d'Iberia, tel que la migration V13 l'enregistre. */
+const CENTRE_IBERIA = { lat: 35.7700, lng: -5.8100 }
 const GERANT = `yasmine.${SUFFIXE}@example.ma`
 const MOT_DE_PASSE = `Gerant!${SUFFIXE}`
 
@@ -176,6 +180,10 @@ await remplir('Nom du salon', SALON)
 await remplir('Ville', 'Tanger')
 await remplir('Adresse', '14 rue de Fès')
 await remplir('Quartier', 'Iberia')
+// Un point relevé à Malabata, à près de 4 km du centre d'Iberia : assez loin
+// pour distinguer, dans un classement par distance, un salon situé au relevé
+// exact d'un salon replié sur le centre de son quartier.
+await remplir('Coordonnées GPS (facultatif)', `${POINT_RELEVE.lat}, ${POINT_RELEVE.lng}`)
 await remplir('Téléphone du salon', '0539112233')
 await remplir('Prénom', 'Yasmine')
 await remplir('Nom', 'Benali')
@@ -192,6 +200,41 @@ dire(!/mot de passe\s*:\s*\S/i.test(compteRendu),
   'aucun mot de passe n\'est affiché au conseiller')
 
 dire(await attendre(SALON), 'le salon apparaît aussitôt dans la liste « En ligne »')
+
+/*
+ * Les coordonnées relevées ont-elles été gardées ?
+ *
+ * Le référencement construit le salon lui-même, sans passer par le service
+ * qui le situe d'ordinaire — c'est par là que les métiers avaient déjà été
+ * oubliés une première fois. Une recherche depuis le point relevé tranche :
+ * le nouveau salon doit s'y trouver, et les salons du même quartier rester à
+ * leur distance du centre d'Iberia.
+ */
+{
+  const r = await fetch(
+    `${API}/api/public/salons?lat=${POINT_RELEVE.lat}&lng=${POINT_RELEVE.lng}&rayon=25&size=50`)
+  const { content = [] } = await r.json()
+  const nouveau = content.find((s) => s.nom === SALON)
+  dire(Boolean(nouveau), 'le salon référencé est situé, donc cherchable par proximité')
+  dire(nouveau && nouveau.distanceKm < 0.2,
+    `il est au point relevé, pas au centre du quartier (${nouveau?.distanceKm?.toFixed(2)} km)`)
+  /*
+   * Et le relevé n'a-t-il pas été écrasé par le centre du quartier ?
+   *
+   * La question se pose depuis le point de repère d'Iberia, et non en
+   * comparant aux salons voisins. Deux versions de cette assertion ont échoué
+   * avant : l'une comptait parmi les salons « sans relevé » ceux qu'avaient
+   * laissés les exécutions précédentes, l'autre exigeait des salons d'Iberia
+   * que la pile partagée n'a pas. Un test qui dépend des données du moment
+   * finit toujours par accuser le code d'un défaut qui vient de lui.
+   */
+  const r2 = await fetch(
+    `${API}/api/public/salons?lat=${CENTRE_IBERIA.lat}&lng=${CENTRE_IBERIA.lng}&rayon=25&size=50`)
+  const depuisLeQuartier = (await r2.json()).content?.find((s) => s.nom === SALON)
+  dire(depuisLeQuartier && depuisLeQuartier.distanceKm > 2,
+    `le relevé n'a pas été écrasé par le centre du quartier `
+    + `(${depuisLeQuartier?.distanceKm?.toFixed(1)} km du centre d'Iberia)`)
+}
 
 /* ------------------------------------------------------------------ *
  * 2. L'invitation part vraiment.

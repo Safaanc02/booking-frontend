@@ -6,9 +6,13 @@ import SalonCard from "../components/SalonCard"
 import { ErrorState } from "../components/Loader"
 import { EtoileHuit } from "../components/Motifs"
 import {
-  Coiffure, Barbier, Onglerie, Esthetique, Hammam,
+  Coiffure, Barbier, Onglerie, Esthetique, Hammam, Boussole,
 } from "../components/Glyphes"
 import { ORDRE_METIERS, libelleMetier } from "../lib/metiers"
+
+/** Rayon de départ, et maximum accepté par le serveur. */
+const RAYON_DEFAUT = 25
+const RAYON_MAX = 100
 
 const GLYPHES = {
   COIFFURE: Coiffure, BARBIER: Barbier, ONGLERIE: Onglerie,
@@ -57,21 +61,45 @@ export default function Results() {
   const q = params.get("q") ?? ""
   const ville = params.get("ville") ?? ""
   const metier = params.get("metier") ?? ""
+  // Une coordonnée seule ne situe rien, et le serveur la refuse : les deux
+  // doivent être là pour que la recherche soit dite « située ».
+  const lat = params.get("lat")
+  const lng = params.get("lng")
+  const situee = Boolean(lat && lng)
+  const rayon = Number(params.get("rayon")) || RAYON_DEFAUT
 
   const [etat, setEtat] = useState({ statut: "chargement", data: null, erreur: null })
 
   const charger = useCallback(() => {
     setEtat({ statut: "chargement", data: null, erreur: null })
     publicApi
-      .rechercherSalons({ q, ville, metier })
+      .rechercherSalons({
+        q, ville, metier,
+        ...(situee ? { lat, lng, rayon } : {}),
+      })
       .then((data) => setEtat({ statut: "ok", data, erreur: null }))
       .catch((erreur) => setEtat({ statut: "erreur", data: null, erreur }))
-  }, [q, ville, metier])
+  }, [q, ville, metier, situee, lat, lng, rayon])
 
   useEffect(charger, [charger])
 
   const salons = etat.data?.content ?? []
   const total = etat.data?.totalElements ?? salons.length
+
+  const elargir = () => {
+    const suivant = new URLSearchParams(params)
+    suivant.set("rayon", RAYON_MAX)
+    setParams(suivant, { replace: true })
+  }
+
+  /** Retour à une recherche ordinaire : la position quitte l'URL. */
+  const oublierPosition = () => {
+    const suivant = new URLSearchParams(params)
+    suivant.delete("lat")
+    suivant.delete("lng")
+    suivant.delete("rayon")
+    setParams(suivant, { replace: true })
+  }
 
   const basculerMetier = (cle) => {
     const suivant = new URLSearchParams(params)
@@ -86,7 +114,7 @@ export default function Results() {
           liste au lieu de flotter dans le même blanc que les cartes. */}
       <div className="relative overflow-hidden border-b border-stone-200/70 bg-gradient-to-b from-brand-50/70 to-ivoire">
         <div className="relative mx-auto max-w-6xl px-4 py-7">
-          <SearchBar valeursInitiales={{ q, ville }} variante="hero" />
+          <SearchBar valeursInitiales={{ q, ville }} variante="hero" situee={situee} />
         </div>
       </div>
 
@@ -102,7 +130,8 @@ export default function Results() {
                 {total === 0
                   ? "Aucun salon"
                   : `${total} salon${total > 1 ? "s" : ""}`}
-                {ville && <span className="font-normal text-stone-500">à {ville}</span>}
+                {situee && <span className="font-normal text-stone-500">autour de vous</span>}
+                {ville && !situee && <span className="font-normal text-stone-500">à {ville}</span>}
               </h1>
 
               <div className="flex flex-wrap gap-2">
@@ -128,19 +157,69 @@ export default function Results() {
               </div>
             </div>
 
+            {situee && (
+              /* Ce que le classement vaut, et comment en sortir.
+                 Une liste triée par distance sans dire depuis quel point ni
+                 avec quelle précision invite à lire « à 3 km » comme un
+                 relevé : c'est une distance à vol d'oiseau, depuis le centre
+                 du quartier du salon tant que ses coordonnées n'ont pas été
+                 relevées. Mieux vaut l'écrire une fois en haut que laisser
+                 chaque carte le laisser croire. */
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-white px-4 py-3 ring-1 ring-stone-200/70">
+                <span className="inline-flex items-center gap-2 text-sm font-medium text-stone-800">
+                  <Boussole className="h-4 w-4 text-brand-600" />
+                  Du plus proche au plus lointain
+                </span>
+                <span className="text-sm text-stone-500">
+                  à moins de {rayon} km · distances à vol d’oiseau, au quartier près
+                </span>
+                {etat.data?.nonSitues > 0 && (
+                  <span className="text-sm text-stone-500">
+                    · {etat.data.nonSitues} salon{etat.data.nonSitues > 1 ? "s" : ""} non
+                    situé{etat.data.nonSitues > 1 ? "s" : ""}, absent
+                    {etat.data.nonSitues > 1 ? "s" : ""} de ce classement
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={oublierPosition}
+                  className="ml-auto text-sm font-medium text-brand-700 underline underline-offset-4 transition hover:text-brand-800"
+                >
+                  Voir tous les salons
+                </button>
+              </div>
+            )}
+
             {salons.length === 0 ? (
               <div className="mt-8 overflow-hidden rounded-3xl bg-white ring-1 ring-stone-200/70">
                 <div className="p-10 text-center">
                   <EtoileHuit className="mx-auto h-7 w-7 text-brand-200" />
                   <h2 className="mt-4 text-xl font-semibold text-stone-900">
-                    Rien ne correspond{metier ? " à ce métier" : ""}
+                    {situee
+                      ? `Aucun salon à moins de ${rayon} km`
+                      : `Rien ne correspond${metier ? " à ce métier" : ""}`}
                   </h2>
                   <p className="mx-auto mt-2 max-w-sm text-sm text-stone-600">
-                    {metier
-                      ? "Retirez le filtre de métier, ou essayez une autre ville."
-                      : "Essayez une autre ville, ou des mots-clés plus larges. Le réseau s’étend salon par salon."}
+                    {situee
+                      ? "Le réseau s’étend ville par ville. Élargissez la recherche, ou choisissez une ville dans la liste."
+                      : metier
+                        ? "Retirez le filtre de métier, ou essayez une autre ville."
+                        : "Essayez une autre ville, ou des mots-clés plus larges. Le réseau s’étend salon par salon."}
                   </p>
-                  {metier && (
+                  {/* Élargir plutôt que rendre la main : à 25 km de chez soi il
+                      n'y a peut-être aucun salon, à 100 il y a la ville
+                      voisine. Le bouton disparaît au maximum accepté par le
+                      serveur, pour ne pas promettre un élargissement qui
+                      rendrait la même page. */}
+                  {situee && rayon < RAYON_MAX && (
+                    <button
+                      onClick={elargir}
+                      className="mt-6 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700"
+                    >
+                      Chercher jusqu’à {RAYON_MAX} km
+                    </button>
+                  )}
+                  {!situee && metier && (
                     <button
                       onClick={() => basculerMetier(metier)}
                       className="mt-6 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700"

@@ -95,3 +95,23 @@ export const Rappel = (p) => (
     <path d="M3.6 7 12 13.2 20.4 7" />
   </Dessin>
 )
+
+/**
+ * Boussole : un cercle, une aiguille.
+ *
+ * Préférée à la goutte d'épingle de carte, trop associée aux cartes
+ * elles-mêmes — il n'y a pas de carte ici, seulement un classement par
+ * distance. L'aiguille dit la direction, pas un point posé sur un plan.
+ *
+ * Aiguille pleine et rose des vents supprimée : ce glyphe s'affiche à 14 et
+ * 16 pixels, dans un bouton et sur une pastille de carte. La première version
+ * cernait l'aiguille au trait et ajoutait quatre repères cardinaux — à cette
+ * taille, quatre traits de 1,4 px et un quadrilatère vide se confondent en une
+ * tache. Le plein tient la petite taille, le trait non.
+ */
+export const Boussole = (p) => (
+  <Dessin {...p}>
+    <circle cx="12" cy="12" r="8.8" />
+    <path d="M16.4 7.6 13.1 13.1 7.6 16.4 10.9 10.9Z" fill="currentColor" stroke="none" />
+  </Dessin>
+)
