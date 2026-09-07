@@ -56,25 +56,3 @@ export const isoDate = (d) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-/**
- * Date hégirienne, en complément de la date grégorienne.
- *
- * « 21 rabia al awal » sous « vendredi 4 septembre ». Ce n'est pas un
- * ornement : pendant le Ramadan, les horaires des salons se décalent
- * entièrement, et c'est le repère que les clients ont en tête.
- *
- * ⚠️ Calendrier Umm al-Qura, tabulaire. Le Maroc fixe ses dates religieuses
- * par observation de la lune, si bien qu'un jour d'écart est possible. On
- * l'affiche donc comme un repère, jamais comme une autorité — et jamais seul.
- */
-export const dateHijri = (date) => {
-  try {
-    return new Intl.DateTimeFormat("fr-MA-u-ca-islamic-umalqura", {
-      day: "numeric", month: "long", timeZone: ZONE,
-    }).format(typeof date === "string" ? new Date(`${date}T12:00:00`) : date)
-  } catch {
-    // Environnement sans données de calendrier : on se passe du complément
-    // plutôt que de faire échouer l'affichage de la date.
-    return null
-  }
-}

@@ -10,7 +10,7 @@ import {
   Coiffure, Barbier, Onglerie, Esthetique, Hammam,
   Horloge, Etiquette, Rappel,
 } from "../components/Glyphes"
-import { ZONE, prix, duree, jourLong, heureLocale, dateHijri } from "../lib/format"
+import { ZONE, prix, duree, jourLong, heureLocale } from "../lib/format"
 
 /** Amplitude d'ouverture courante des salons du réseau, en heures locales. */
 const OUVERTURE = [9, 19]
@@ -277,30 +277,9 @@ function ApercuCreneaux({ salon }) {
         </div>
       )}
 
-      {/*
-        Les deux calendriers, côte à côte et lisibles.
-
-        Trois versions ont été nécessaires. La première écrivait la date
-        hégirienne en stone-300 sur blanc — 1,5:1 de contraste — et elle
-        passait pour absente. La deuxième corrigeait le contraste mais la
-        laissait à 12 px dans une ligne grise, où elle se lisait encore comme
-        une métadonnée qu'on saute. Elle est donc maintenant une pastille : la
-        même information, mais à sa place, et reconnaissable comme l'autre
-        calendrier plutôt que comme une précision.
-
-        Pendant le Ramadan, les horaires des salons se décalent entièrement,
-        et c'est ce repère que les clients ont en tête.
-      */}
       {apercu && (
       <>
-      <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1">
-        <p className="text-sm font-medium text-stone-700">{jourLong(apercu.date)}</p>
-        {dateHijri(apercu.date) && (
-          <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-brand-100">
-            {dateHijri(apercu.date)}
-          </span>
-        )}
-      </div>
+      <p className="mt-4 text-sm font-medium text-stone-700">{jourLong(apercu.date)}</p>
 
       <div className="mt-2 grid grid-cols-4 gap-2">
         {apercu.creneaux.map((c) => (
