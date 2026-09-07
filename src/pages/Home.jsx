@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { publicApi } from "../api/bookingApi"
 import SearchBar from "../components/SearchBar"
@@ -259,9 +259,24 @@ function ApercuCreneaux({ salon }) {
 }
 
 export default function Home() {
-  const [reseau, setReseau] = useState({ salons: [], villes: [], total: 0, complet: false })
+  const [reseau, setReseau] = useState({
+    salons: [], villes: [], total: 0, complet: false, erreur: false,
+  })
 
-  useEffect(() => {
+  /**
+   * Le réseau, et l'échec dit à haute voix.
+   *
+   * L'erreur était avalée par un catch vide. Conséquence : une API
+   * injoignable donnait exactement la même page qu'un réseau sans aucun
+   * salon — mêmes sections, sans le décompte ni le salon mis en avant, et
+   * sans un mot. Impossible de distinguer une panne d'un catalogue vide,
+   * jusqu'à me demander où était passé le salon.
+   *
+   * Le silence reste le bon choix pour « ce salon n'a pas de créneau libre ».
+   * Il ne l'est pas pour « le serveur ne répond pas ».
+   */
+  const charger = useCallback(() => {
+    setReseau((etat) => ({ ...etat, erreur: false }))
     let vivant = true
     Promise.all([publicApi.rechercherSalons({ size: 50 }), publicApi.villes()])
       .then(([page, villes]) => {
@@ -275,11 +290,16 @@ export default function Home() {
           // le réseau. Au-delà, on affiche les villes sans les dénombrer plutôt
           // qu'un chiffre faux.
           complet: (page.totalElements ?? 0) <= salons.length,
+          erreur: false,
         })
       })
-      .catch(() => {})
+      .catch(() => {
+        if (vivant) setReseau({ salons: [], villes: [], total: 0, complet: false, erreur: true })
+      })
     return () => { vivant = false }
   }, [])
+
+  useEffect(charger, [charger])
 
   const mieuxNotes = [...reseau.salons]
     .filter((s) => s.noteMoyenne && s.nombreAvis)
@@ -328,6 +348,22 @@ export default function Home() {
             <div className="mt-8 max-w-2xl">
               <SearchBar variante="hero" villes={reseau.villes} />
             </div>
+
+            {/* La panne se dit là où le décompte s'affiche : c'est l'endroit
+                que l'œil cherche pour savoir si le réseau a répondu. Discret,
+                parce que le reste de la page — titre, recherche — fonctionne. */}
+            {reseau.erreur && (
+              <p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-600">
+                <span>Les salons n’ont pas pu être chargés.</span>
+                <button
+                  type="button"
+                  onClick={charger}
+                  className="font-medium text-brand-700 underline underline-offset-4 hover:text-brand-800"
+                >
+                  Réessayer
+                </button>
+              </p>
+            )}
 
             {reseau.total > 0 && (
               <p className="mt-5 text-sm text-stone-500">
