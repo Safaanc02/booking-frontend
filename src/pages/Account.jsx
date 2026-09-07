@@ -81,7 +81,7 @@ export default function Account() {
 
       <div className="mt-6 space-y-8">
         {etat.statut === "chargement" && <Loader />}
-        {etat.statut === "erreur" && <ErrorState erreur={etat.erreur} onRetry={charger} />}
+        {etat.statut === "erreur" && <ErrorState erreur={etat.erreur} onRetry={charger} onReconnect={login} />}
 
         {etat.statut === "ok" && etat.data.length === 0 && (
           <EmptyState titre="Aucune réservation pour le moment">
