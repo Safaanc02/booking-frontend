@@ -207,6 +207,90 @@ for (const [nom, largeur, hauteur] of [['mobile', 390, 844], ['tablette', 768, 1
   await p.close()
 }
 
+/* ------------------------------------------------------------------ *
+ * La carte du salon en vedette ne disparaît plus en silence.
+ * ------------------------------------------------------------------ */
+console.log()
+console.log('─── La carte de créneaux, quand ça se passe mal ────')
+
+/**
+ * Ouvre l'accueil en détournant certains appels de l'API.
+ *
+ * C'est le seul moyen de voir ce que voit quelqu'un dont la connexion traîne
+ * ou dont un appel échoue. Ces états-là ne se provoquent pas à la main, et
+ * c'est justement dans ceux-là que la carte s'effaçait sans un mot : elle se
+ * construit en trois appels enchaînés, et rendait `null` tant que les trois
+ * n'avaient pas abouti. On a demandé deux fois où était passé le salon.
+ */
+const ouvrirDetourne = async ({ bloquer = [], lent = [] } = {}) => {
+  const q = await browser.newPage()
+  await q.setViewport({ width: 1440, height: 900 })
+  await q.setCacheEnabled(false)
+  await q.setRequestInterception(true)
+  q.on('request', async (r) => {
+    const u = r.url()
+    if (bloquer.some((m) => u.includes(m))) return r.abort()
+    if (lent.some((m) => u.includes(m))) {
+      await new Promise((x) => setTimeout(x, 4000))
+      return r.continue()
+    }
+    r.continue()
+  })
+  q.on('pageerror', (e) => erreurs.push(String(e)))
+  await q.goto(BASE, { waitUntil: 'domcontentloaded' })
+  return q
+}
+
+/** La carte, repérée à sa forme : le seul bloc arrondi à ombre portée du haut. */
+const carteVedette = (q) => q.evaluate(() => {
+  const d = [...document.querySelectorAll('div')].find((x) =>
+    x.className.includes?.('rounded-3xl') && x.className.includes?.('shadow-xl'))
+  return d ? Math.round(d.getBoundingClientRect().width) : 0
+})
+
+{
+  // Pendant les trois appels : la colonne doit déjà exister, à sa largeur
+  // définitive, sinon la mise en page saute et la page paraît amputée.
+  const q = await ouvrirDetourne({ lent: ['/prochaines-dispos'] })
+  await pause(2200)
+  const largeur = await carteVedette(q)
+  dire(largeur > 300, `la colonne tient sa place pendant le chargement (${largeur} px)`)
+  const pendant = await q.evaluate(() => document.body.innerText)
+  dire(contient(pendant, 'Dar Zine') || /[A-Z]/.test(pendant),
+    'le salon est déjà nommé pendant l\'attente')
+  await pause(4200)
+  dire(contient(await q.evaluate(() => document.body.innerText), 'libre en ce moment'),
+    'elle se remplit dès que l\'appel aboutit')
+  await q.close()
+}
+
+{
+  // Créneaux en échec : le salon reste montré, l'échec est dit, et la carte
+  // ne promet plus de disponibilité qu'elle ne connaît pas.
+  const q = await ouvrirDetourne({ bloquer: ['/disponibilites'] })
+  await pause(4000)
+  const texte = await q.evaluate(() => document.body.innerText)
+  dire(await carteVedette(q) > 300, 'la carte reste quand les créneaux échouent')
+  dire(contient(texte, 'salon en vedette'), 'l\'intitulé cesse de promettre des créneaux')
+  dire(contient(texte, 'pas pu être chargés'), 'l\'échec est écrit')
+  dire(!contient(texte, 'libre en ce moment'),
+    'aucune disponibilité n\'est annoncée sans être connue')
+  dire(/Voir /.test(texte), 'une sortie vers la fiche est offerte')
+  await q.close()
+}
+
+{
+  // Réseau entier muet : le décompte laisse place à l'échec et à un moyen de
+  // réessayer, et le reste de la page tient debout.
+  const q = await ouvrirDetourne({ bloquer: ['/api/public/'] })
+  await pause(4000)
+  const texte = await q.evaluate(() => document.body.innerText)
+  dire(contient(texte, 'pas pu être chargés') || contient(texte, 'Réessayer'),
+    'un réseau injoignable est annoncé, pas tu')
+  dire(contient(texte, 'sans un seul appel'), 'le reste de la page tient debout')
+  await q.close()
+}
+
 console.log()
 console.log('─── Journal du navigateur ──────────────────────────')
 dire(erreurs.length === 0, `aucune exception JavaScript${erreurs.length ? ` (${erreurs.length})` : ''}`)

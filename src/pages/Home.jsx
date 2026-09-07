@@ -148,16 +148,34 @@ function TitreSection({ titre, complement, lien, libelleLien }) {
  * chaîne d'appels est assumé — c'est le seul endroit du site où la promesse est
  * vérifiable d'un coup d'œil.
  *
- * Elle disparaît en silence si quoi que ce soit manque : un salon sans
- * catalogue, un agenda plein, un serveur muet. Mieux vaut une colonne vide
- * qu'un encadré d'erreur sur une page d'accueil.
+ * Elle se construisait en trois appels enchaînés — la fiche du salon, les
+ * jours ouverts, puis les créneaux du premier jour — et rendait `null` tant
+ * que les trois n'avaient pas abouti. La colonne n'existait donc pas pendant
+ * trois allers-retours, puis surgissait. À travers un tunnel, où chaque appel
+ * quitte le réseau local, l'attente se voit.
+ *
+ * Elle disparaissait en outre sans un mot dans cinq cas : pas de salon en
+ * vedette, salon sans catalogue, aucun jour ouvert sur quinze, jour retenu
+ * sans créneau, appel en échec. Chacun rendait exactement la même page qu'un
+ * site où cette carte n'existerait pas — impossible de distinguer une panne
+ * d'un agenda plein, jusqu'à demander deux fois où elle était passée.
+ *
+ * Trois règles depuis :
+ *
+ *   1. la place est réservée dès le premier affichage, par un squelette à sa
+ *      forme — rien ne surgit, rien ne paraît manquer ;
+ *   2. dès qu'un salon est en vedette, la carte reste, avec ce qu'on sait de
+ *      lui : son nom, son quartier, sa note, son tarif d'entrée ;
+ *   3. l'absence de créneaux se dit, et se distingue d'un serveur muet — un
+ *      agenda plein est une information, une panne en est une autre.
  */
 function ApercuCreneaux({ salon }) {
-  const [apercu, setApercu] = useState(null)
+  const [etat, setEtat] = useState({ statut: "chargement", apercu: null, prestation: null })
 
   useEffect(() => {
     if (!salon) return
     let vivant = true
+    setEtat({ statut: "chargement", apercu: null, prestation: null })
 
     ;(async () => {
       try {
@@ -167,34 +185,52 @@ function ApercuCreneaux({ salon }) {
         // d'entrée est plus parlant qu'un tarif de couleur.
         const prestation = [...(fiche.prestations ?? [])]
           .sort((a, b) => (a.dureeMinutes ?? 0) - (b.dureeMinutes ?? 0))[0]
-        if (!prestation) return
+        if (!prestation) {
+          if (vivant) setEtat({ statut: "sans-catalogue", apercu: null, prestation: null })
+          return
+        }
 
         const jours = await publicApi.prochainesDispos(salon.id,
           { prestationId: prestation.id, jours: 14 })
-        if (!jours?.length) return
+        if (!jours?.length) {
+          if (vivant) setEtat({ statut: "complet", apercu: null, prestation })
+          return
+        }
 
         const dispos = await publicApi.disponibilites(salon.id,
           { prestationId: prestation.id, date: jours[0] })
         const creneaux = (dispos.creneaux ?? []).slice(0, 8)
-        if (!creneaux.length) return
+        if (!creneaux.length) {
+          if (vivant) setEtat({ statut: "complet", apercu: null, prestation })
+          return
+        }
 
-        if (vivant) setApercu({ prestation, date: jours[0], creneaux })
+        if (vivant) {
+          setEtat({ statut: "ok", apercu: { prestation, date: jours[0], creneaux }, prestation })
+        }
       } catch {
-        // Aperçu indisponible : la colonne reste au motif seul.
+        // Une panne n'est pas un agenda plein : le salon reste montré, mais la
+        // page ne prétend pas savoir s'il a des créneaux.
+        if (vivant) setEtat({ statut: "injoignable", apercu: null, prestation: null })
       }
     })()
 
     return () => { vivant = false }
   }, [salon])
 
-  if (!salon || !apercu) return null
+  // Pas encore de salon en vedette : le squelette tient la colonne pour que
+  // la mise en page ne saute pas quand il arrive.
+  if (!salon) return <SqueletteApercu />
+  if (etat.statut === "chargement") return <SqueletteApercu nom={salon.nom} />
+
+  const { apercu } = etat
 
   return (
     <div className="rounded-3xl bg-white p-6 shadow-xl shadow-brand-900/10 ring-1 ring-stone-200/70">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-600">
-            Libre en ce moment
+            {apercu ? "Libre en ce moment" : "Salon en vedette"}
           </p>
           <h3 className="mt-1 truncate text-lg font-bold text-stone-900">{salon.nom}</h3>
           <p className="truncate text-sm text-stone-500">
@@ -204,14 +240,42 @@ function ApercuCreneaux({ salon }) {
         <NoteResume moyenne={salon.noteMoyenne} nombre={salon.nombreAvis} classe="shrink-0" />
       </div>
 
-      <div className="mt-5 flex items-baseline justify-between gap-3 border-t border-stone-100 pt-4">
-        <span className="truncate text-sm font-medium text-stone-800">
-          {apercu.prestation.nom}
-        </span>
-        <span className="shrink-0 text-sm text-stone-500">
-          {duree(apercu.prestation.dureeMinutes)} · {prix(apercu.prestation.prix)}
-        </span>
-      </div>
+      {(apercu?.prestation ?? etat.prestation) && (
+        <div className="mt-5 flex items-baseline justify-between gap-3 border-t border-stone-100 pt-4">
+          <span className="truncate text-sm font-medium text-stone-800">
+            {(apercu?.prestation ?? etat.prestation).nom}
+          </span>
+          <span className="shrink-0 text-sm text-stone-500">
+            {duree((apercu?.prestation ?? etat.prestation).dureeMinutes)}
+            {" · "}{prix((apercu?.prestation ?? etat.prestation).prix)}
+          </span>
+        </div>
+      )}
+
+      {/*
+        Pas de créneau à montrer : la carte le dit, et dit laquelle des trois
+        raisons. « Complet » invite à ouvrir la fiche, où les jours suivants
+        sont visibles ; « injoignable » invite à réessayer ; un catalogue vide
+        annonce un salon qu'on finit d'installer. Trois phrases, parce que
+        trois gestes différents.
+      */}
+      {!apercu && (
+        <div className="mt-5 border-t border-stone-100 pt-4">
+          <p className="text-sm text-stone-600">
+            {etat.statut === "complet"
+              ? "Aucun créneau libre sur les quinze prochains jours. La fiche montre les suivants."
+              : etat.statut === "sans-catalogue"
+                ? "Les prestations de ce salon sont en cours d’installation."
+                : "Les créneaux n’ont pas pu être chargés."}
+          </p>
+          <Link
+            to={`/salon/${salon.id}`}
+            className="mt-4 block rounded-xl bg-stone-900 py-3 text-center text-sm font-semibold text-white transition hover:bg-stone-800"
+          >
+            Voir {salon.nom}
+          </Link>
+        </div>
+      )}
 
       {/*
         Les deux calendriers, côte à côte et lisibles.
@@ -227,6 +291,8 @@ function ApercuCreneaux({ salon }) {
         Pendant le Ramadan, les horaires des salons se décalent entièrement,
         et c'est ce repère que les clients ont en tête.
       */}
+      {apercu && (
+      <>
       <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1">
         <p className="text-sm font-medium text-stone-700">{jourLong(apercu.date)}</p>
         {dateHijri(apercu.date) && (
@@ -254,6 +320,46 @@ function ApercuCreneaux({ salon }) {
       >
         Réserver chez {salon.nom}
       </Link>
+      </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Squelette de la carte, à sa forme et à sa hauteur.
+ *
+ * Il ne sert pas à faire patienter : il empêche la colonne de ne pas exister.
+ * Sans lui, la mise en page vivait trois allers-retours sans sa moitié droite,
+ * puis sautait — et pendant ce temps la page était indistinguable d'une page
+ * dont on aurait retiré la carte.
+ */
+function SqueletteApercu({ nom }) {
+  return (
+    <div className="rounded-3xl bg-white p-6 shadow-xl shadow-brand-900/10 ring-1 ring-stone-200/70">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="h-3 w-28 animate-pulse rounded bg-brand-100" />
+          {nom ? (
+            <h3 className="mt-2 truncate text-lg font-bold text-stone-900">{nom}</h3>
+          ) : (
+            <div className="mt-2 h-5 w-40 animate-pulse rounded bg-stone-200/80" />
+          )}
+          <div className="mt-2 h-3 w-32 animate-pulse rounded bg-stone-100" />
+        </div>
+        <div className="h-5 w-16 shrink-0 animate-pulse rounded bg-stone-100" />
+      </div>
+      <div className="mt-5 flex items-baseline justify-between gap-3 border-t border-stone-100 pt-4">
+        <div className="h-4 w-24 animate-pulse rounded bg-stone-200/70" />
+        <div className="h-4 w-28 animate-pulse rounded bg-stone-100" />
+      </div>
+      <div className="mt-4 h-4 w-36 animate-pulse rounded bg-stone-100" />
+      <div className="mt-2 grid grid-cols-4 gap-2">
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+          <div key={i} className="h-9 animate-pulse rounded-xl bg-stone-100" />
+        ))}
+      </div>
+      <div className="mt-5 h-11 animate-pulse rounded-xl bg-stone-200/70" />
     </div>
   )
 }
