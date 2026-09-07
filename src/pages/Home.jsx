@@ -214,26 +214,28 @@ function ApercuCreneaux({ salon }) {
       </div>
 
       {/*
-        La date hégirienne en second : pendant le Ramadan, c'est le repère que
-        les clients ont en tête, et les horaires des salons s'y décalent
-        entièrement.
+        Les deux calendriers, côte à côte et lisibles.
 
-        En second, non effacée. Écrite d'abord en stone-300 sur blanc — moins
-        de 2:1 de contraste — elle passait pour absente, au point qu'on m'a
-        demandé pourquoi je l'avais retirée. Une mention discrète doit rester
-        lisible : sinon elle n'informe personne tout en occupant la place.
+        Trois versions ont été nécessaires. La première écrivait la date
+        hégirienne en stone-300 sur blanc — 1,5:1 de contraste — et elle
+        passait pour absente. La deuxième corrigeait le contraste mais la
+        laissait à 12 px dans une ligne grise, où elle se lisait encore comme
+        une métadonnée qu'on saute. Elle est donc maintenant une pastille : la
+        même information, mais à sa place, et reconnaissable comme l'autre
+        calendrier plutôt que comme une précision.
 
-        Cette ligne dit à quel jour se rapportent les créneaux en dessous :
-        c'est une information, pas une décoration. La hiérarchie entre les deux
-        dates passe donc par la graisse et non par le contraste — à 12 px,
-        stone-400 tombe à 2,5:1 sur blanc, sous le seuil de lisibilité.
+        Pendant le Ramadan, les horaires des salons se décalent entièrement,
+        et c'est ce repère que les clients ont en tête.
       */}
-      <p className="mt-4 text-xs font-medium text-stone-500">
-        {jourLong(apercu.date)}
+      <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        <p className="text-sm font-medium text-stone-700">{jourLong(apercu.date)}</p>
         {dateHijri(apercu.date) && (
-          <span className="font-normal text-stone-500"> · {dateHijri(apercu.date)}</span>
+          <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-brand-100">
+            {dateHijri(apercu.date)}
+          </span>
         )}
-      </p>
+      </div>
+
       <div className="mt-2 grid grid-cols-4 gap-2">
         {apercu.creneaux.map((c) => (
           <Link
