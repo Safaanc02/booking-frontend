@@ -15,6 +15,7 @@
  *   npm run verifier:pro
  */
 import puppeteer from 'puppeteer-core'
+import zlib from 'node:zlib'
 
 const CHROME = process.env.CHROME_PATH
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
@@ -466,6 +467,88 @@ console.log('\n─── La fiche du salon ────────────�
   const restant = await page.evaluate(() =>
     [...document.querySelectorAll('button[aria-pressed="true"]')].length)
   console.log(' ', ok(restant >= 1), `on ne peut pas retirer son dernier métier (${restant} coché)`)
+}
+
+/* ------------------------------------------------------------------ *
+ * Les photos du salon.
+ * ------------------------------------------------------------------ */
+console.log('\n─── Photos ─────────────────────────────────────────')
+{
+  /*
+   * Une identité visuelle engendrée depuis le nom tenait la place, et reste
+   * le repli. Mais une photo vend ce qu'un dégradé ne vendra jamais.
+   *
+   * Le test porte surtout sur ce que l'envoi refuse. Accepter une image est
+   * facile ; le risque est ailleurs — servir sous le type « image/png » un
+   * fichier qui n'en est pas revient à laisser un tiers décider de ce que le
+   * navigateur d'un visiteur va interpréter.
+   */
+  const idSalon = Number(page.url().match(/\/pro\/salons?\/(\d+)/)?.[1])
+  const tokenPro = await jeton(IDENTIFIANT)
+
+  // Un vrai PNG, engendré ici : aucun fichier d'essai à traîner dans le dépôt,
+  // et la signature est exacte.
+  const png = (() => {
+    const bloc = (nom, data) => {
+      const len = Buffer.alloc(4); len.writeUInt32BE(data.length)
+      const corps = Buffer.concat([Buffer.from(nom), data])
+      const crc = Buffer.alloc(4); crc.writeUInt32BE(zlib.crc32(corps) >>> 0)
+      return Buffer.concat([len, corps, crc])
+    }
+    const ihdr = Buffer.alloc(13)
+    ihdr.writeUInt32BE(8, 0); ihdr.writeUInt32BE(8, 4)
+    ihdr[8] = 8; ihdr[9] = 2
+    const brut = Buffer.concat(Array.from({ length: 8 },
+      () => Buffer.concat([Buffer.from([0]), Buffer.alloc(24, 0x9a)])))
+    return Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      bloc('IHDR', ihdr), bloc('IDAT', zlib.deflateSync(brut)), bloc('IEND', Buffer.alloc(0)),
+    ])
+  })()
+
+  const envoyer = async (contenu, nom, type) => {
+    const corps = new FormData()
+    corps.append('fichier', new Blob([contenu], { type }), nom)
+    const r = await fetch(`${API}/api/pro/salons/${idSalon}/photos`, {
+      method: 'POST', headers: { Authorization: `Bearer ${tokenPro}` }, body: corps,
+    })
+    return { statut: r.status, corps: await r.json().catch(() => null) }
+  }
+
+  const accepte = await envoyer(png, 'devanture.png', 'image/png')
+  console.log(' ', ok(accepte.statut === 200), `un vrai PNG est accepté (HTTP ${accepte.statut})`)
+  console.log(' ', ok(accepte.corps?.fichier?.endsWith('.png') && !accepte.corps.fichier.includes('devanture')),
+    `le nom est engendré, jamais celui envoyé (${accepte.corps?.fichier})`)
+
+  // Le cas qui compte : un script qui se présente comme une image.
+  const piege = Buffer.from("<?php system($_GET['c']); ?>")
+  const refuse = await envoyer(piege, 'devanture.png', 'image/png')
+  console.log(' ', ok(refuse.statut === 400),
+    `un script déclaré « image/png » est refusé (HTTP ${refuse.statut})`)
+  console.log(' ', ok(/format non reconnu/i.test(refuse.corps?.message ?? '')),
+    'le refus dit pourquoi, sans jargon')
+
+  // La photo doit être servie avec le type constaté, et interdire au
+  // navigateur d'en deviner un autre.
+  const image = await fetch(`${API}${accepte.corps.url}`)
+  console.log(' ', ok(image.headers.get('content-type') === 'image/png'),
+    `servie en ${image.headers.get('content-type')}`)
+  console.log(' ', ok(image.headers.get('x-content-type-options') === 'nosniff'),
+    'le navigateur ne peut pas deviner un autre type')
+
+  // Elle doit apparaître côté client, en couverture.
+  const fiche = await (await fetch(`${API}/api/pro/salons/${idSalon}/photos`,
+    { headers: { Authorization: `Bearer ${tokenPro}` } })).json()
+  console.log(' ', ok(fiche.length >= 1 && fiche[0].ordre === 0),
+    `la première photo est la couverture (${fiche.length} photo(s))`)
+
+  // Et le gérant doit pouvoir la retirer : une photo qu'on ne peut pas
+  // effacer est pire que pas de photo du tout.
+  const suppression = await fetch(`${API}/api/pro/photos/${accepte.corps.id}`,
+    { method: 'DELETE', headers: { Authorization: `Bearer ${tokenPro}` } })
+  console.log(' ', ok(suppression.status === 204), `elle se retire (HTTP ${suppression.status})`)
+  const apres = await fetch(`${API}${accepte.corps.url}`)
+  console.log(' ', ok(apres.status === 404), `et cesse d'être servie (HTTP ${apres.status})`)
 }
 
 console.log('\n─── Bilan ──────────────────────────────────────────')

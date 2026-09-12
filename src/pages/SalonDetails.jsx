@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { Link, useParams } from "react-router-dom"
 import { publicApi } from "../api/bookingApi"
-import { prix, duree, telephone } from "../lib/format"
+import { prix, duree, telephone, urlApi } from "../lib/format"
 import Loader, { ErrorState } from "../components/Loader"
 import ListeAvis from "../components/ListeAvis"
 import Couverture, { Initiales } from "../components/Couverture"
@@ -125,6 +125,39 @@ export default function SalonDetails() {
           <div className="min-w-0">
             {salon.description && (
               <p className="text-[17px] leading-relaxed text-stone-700">{salon.description}</p>
+            )}
+
+            {/*
+              Les photos au-delà de la couverture.
+
+              La première est déjà en bandeau : la répéter ici ne montrerait
+              rien de plus et donnerait l'impression d'un doublon. Une bande
+              qui défile plutôt qu'une grille — deux ou trois photos ne
+              remplissent pas une grille, et six ne doivent pas repousser le
+              catalogue trois écrans plus bas. C'est le catalogue qu'on vient
+              consulter.
+            */}
+            {salon.photos?.length > 1 && (
+              <div className="mt-6 -mx-4 overflow-x-auto px-4 pb-1">
+                <ul className="flex gap-3">
+                  {salon.photos.slice(1).map((url) => (
+                    <li key={url} className="shrink-0">
+                      <img
+                        src={urlApi(url)}
+                        alt=""
+                        aria-hidden
+                        loading="lazy"
+                        decoding="async"
+                        /* Une image qui ne vient pas s'efface au lieu de
+                           laisser un cadre cassé : la fiche vaut mieux avec
+                           une photo de moins qu'avec une icône brisée. */
+                        onError={(e) => { e.currentTarget.closest("li").hidden = true }}
+                        className="h-36 w-52 rounded-2xl object-cover ring-1 ring-stone-200/70 sm:h-40 sm:w-60"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             {employes.length > 0 && (

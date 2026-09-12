@@ -81,3 +81,26 @@ export const quandLibre = (dateIso, heure) => {
   }
   return `${jour.toLocaleDateString("fr-MA", { day: "numeric", month: "short", timeZone: ZONE })} ${hhmm}`
 }
+
+/**
+ * Adresse absolue d'une ressource servie par l'API.
+ *
+ * L'API rend des chemins relatifs — « /api/public/photos/xyz.png » — et c'est
+ * le bon choix de sa part : le site tourne derrière une seule adresse en
+ * production, et un tunnel change la sienne à chaque ouverture. Une adresse
+ * absolue enregistrée en base pointerait tôt ou tard vers un hôte disparu.
+ *
+ * Mais un chemin relatif dans un attribut `src` se résout contre l'origine de
+ * la page, pas contre celle de l'API. En développement, le site est sur 5173
+ * et l'API sur 8080 : le navigateur allait chercher les photos sur le site,
+ * ne trouvait rien, et affichait des cadres cassés — sans que rien ne dise
+ * pourquoi, puisque tout fonctionnait en production.
+ *
+ * axios résolvait déjà ses appels ainsi ; les images doivent faire de même.
+ */
+export const urlApi = (chemin) => {
+  if (!chemin) return null
+  if (/^https?:\/\//.test(chemin)) return chemin
+  const base = import.meta.env.VITE_API_URL ?? ""
+  return `${base}${chemin}`
+}

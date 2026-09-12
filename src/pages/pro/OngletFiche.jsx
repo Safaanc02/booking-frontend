@@ -3,6 +3,7 @@ import { salonsApi } from "../../api/bookingApi"
 import { Champ } from "./ProDashboard"
 import { ORDRE_METIERS, libelleMetier } from "../../lib/metiers"
 import { analyserCoordonnees } from "../../lib/geolocalisation"
+import PhotosSalon from "./PhotosSalon"
 
 /**
  * La fiche du salon, modifiable par son gérant.
@@ -150,6 +151,8 @@ export default function OngletFiche({ salon, onChange }) {
           </label>
         </div>
       </fieldset>
+
+      <PhotosSalon salon={salon} />
 
       <fieldset className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
         <legend className="px-2 text-xs font-semibold uppercase tracking-wide text-stone-400">

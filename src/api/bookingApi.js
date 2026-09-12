@@ -172,6 +172,25 @@ export const proApi = {
    * en supprimer une, jamais la retrouver.
    */
   absences: (salonId) => client.get(`/api/pro/salons/${salonId}/absences`).then((r) => r.data),
+
+  /* ---------- Photos ---------- */
+
+  photos: (salonId) => client.get(`/api/pro/salons/${salonId}/photos`).then((r) => r.data),
+  /**
+   * Dépôt d'une photo.
+   *
+   * Le Content-Type est laissé à axios : il doit porter la frontière du
+   * multipart, qu'axios engendre. L'imposer à la main produit une requête que
+   * le serveur ne sait pas découper, et une erreur qui ne dit pas pourquoi.
+   */
+  deposerPhoto: (salonId, fichier) => {
+    const corps = new FormData()
+    corps.append("fichier", fichier)
+    return client.post(`/api/pro/salons/${salonId}/photos`, corps).then((r) => r.data)
+  },
+  supprimerPhoto: (photoId) => client.delete(`/api/pro/photos/${photoId}`),
+  ordonnerPhotos: (salonId, ids) =>
+    client.put(`/api/pro/salons/${salonId}/photos/ordre`, ids).then((r) => r.data),
   creerAbsence: (payload) => client.post("/api/pro/absences", payload).then((r) => r.data),
   supprimerAbsence: (id) => client.delete(`/api/pro/absences/${id}`),
 }
