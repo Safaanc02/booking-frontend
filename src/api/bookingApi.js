@@ -45,10 +45,24 @@ export const publicApi = {
       .then((r) => r.data),
 
   /** `date` au format AAAA-MM-JJ. `employeId` nul = sans préférence. */
-  disponibilites: (salonId, { prestationId, date, employeId } = {}) =>
+  /**
+   * Créneaux libres d'un jour.
+   *
+   * `frais` force le navigateur à redemander au serveur. La réponse est
+   * mise en cache une minute — c'est la route la plus appelée du produit, et
+   * cette minute la soulage. Mais un gérant qui vient de déclarer une
+   * fermeture et retourne à son agenda verrait ses créneaux inchangés
+   * pendant tout ce temps : il en conclurait que sa saisie n'a rien fait.
+   * Celui qui a provoqué le changement doit en voir l'effet tout de suite.
+   */
+  disponibilites: (salonId, { prestationId, date, employeId, frais = false } = {}) =>
     client
       .get(`/api/public/salons/${salonId}/disponibilites`, {
         params: { prestationId, date, employeId: employeId || undefined },
+        // no-cache et non no-store : le navigateur revalide auprès du serveur
+        // au lieu d'ignorer son cache. Un 304 coûte moins qu'un corps entier,
+        // et la réponse reste juste.
+        ...(frais ? { headers: { "Cache-Control": "no-cache" } } : {}),
       })
       .then((r) => r.data),
 
@@ -138,7 +152,13 @@ export const proApi = {
     client.put(`/api/pro/salons/${salonId}/horaires`, semaine).then((r) => r.data),
 
   /* Absences */
+  /**
+   * Congés et fermetures à venir. La lecture manquait : on pouvait en créer et
+   * en supprimer une, jamais la retrouver.
+   */
+  absences: (salonId) => client.get(`/api/pro/salons/${salonId}/absences`).then((r) => r.data),
   creerAbsence: (payload) => client.post("/api/pro/absences", payload).then((r) => r.data),
+  supprimerAbsence: (id) => client.delete(`/api/pro/absences/${id}`),
 }
 
 export const adminApi = {

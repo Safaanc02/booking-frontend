@@ -151,7 +151,13 @@ function SaisieTelephone({ salon, jour, onEnregistre }) {
   useEffect(() => {
     if (!form.prestationId || !form.employeId) { setCreneaux([]); return }
     publicApi
-      .disponibilites(salon.id, { prestationId: form.prestationId, date: jour, employeId: form.employeId })
+      // frais : ce formulaire appartient au gérant, qui vient peut-être de
+      // déclarer une fermeture ou de changer ses horaires. Lui montrer la
+      // réponse d'il y a une minute lui ferait croire que sa saisie n'a rien
+      // fait.
+      .disponibilites(salon.id, {
+        prestationId: form.prestationId, date: jour, employeId: form.employeId, frais: true,
+      })
       .then((d) => setCreneaux(d.creneaux ?? []))
       .catch(() => setCreneaux([]))
   }, [salon.id, form.prestationId, form.employeId, jour])

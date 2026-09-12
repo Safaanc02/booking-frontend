@@ -107,6 +107,16 @@ const browser = await puppeteer.launch({
 })
 const page = await browser.newPage()
 await page.setViewport({ width: 1280, height: 1000 })
+/*
+ * Sans cela, cette suite mesure la mémoire du navigateur et non le serveur.
+ *
+ * La route de disponibilité répond `max-age=60`. En déclarant une fermeture
+ * puis en relisant les créneaux dans la foulée, le test recevait la réponse
+ * d'avant, mise en cache quelques secondes plus tôt — et concluait que le
+ * moteur ignorait la fermeture. Sept suites sur huit le désactivaient déjà ;
+ * celle-ci était la seule à ne pas le faire.
+ */
+await page.setCacheEnabled(false)
 /**
  * Deux catégories distinctes, et une seule fait échouer le test.
  *
@@ -310,6 +320,153 @@ if (creneaux.length > 0) {
 }
 
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/pro-agenda.png', fullPage: true })
+
+/* ------------------------------------------------------------------ *
+ * Congés et fermetures.
+ * ------------------------------------------------------------------ */
+console.log('\n─── Congés et fermetures ───────────────────────────')
+{
+  /*
+   * Le modèle et les routes d'écriture existaient ; il manquait la lecture et
+   * l'écran. On pouvait déclarer une absence sans jamais la relire ni la
+   * corriger — écrire sans pouvoir relire n'est pas une fonctionnalité.
+   *
+   * La fermeture est vérifiée là où elle doit se voir : dans le formulaire de
+   * prise de rendez-vous. Un écran qui liste une fermeture sans que l'agenda
+   * la respecte laisserait prendre des rendez-vous un jour où personne
+   * n'ouvre — et c'est le client qui trouverait porte close.
+   */
+  const iso = (d) => {
+    const p = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+  }
+  // Le jour ouvert trouvé plus haut : celui-là a des créneaux, une fermeture
+  // y prouve donc quelque chose. Un jour déjà vide resterait vide.
+  const dateFermee = new Date()
+  dateFermee.setDate(dateFermee.getDate() + joursAvances)
+  const jourFerme = iso(dateFermee)
+
+  await clic('Congés')
+  console.log(' ', ok(await attendre('Déclarer une absence')), 'l\'onglet Congés s\'ouvre')
+  console.log(' ', ok(await attendre('Aucune fermeture prévue')),
+    'aucune fermeture au départ, et l\'écran le dit')
+
+  await saisir('Du', jourFerme)
+  await saisir('Au (inclus)', jourFerme)
+  await saisir('Motif', 'Aïd')
+  await clic('Déclarer')
+  console.log(' ', ok(await attendre('Aïd')), `la fermeture du ${jourFerme} apparaît dans la liste`)
+  console.log(' ', ok(await attendre('Salon fermé')), 'elle vise bien le salon entier')
+
+  /*
+   * La journée de fin est-elle vraiment incluse ?
+   *
+   * Le modèle borne l'absence par deux instants, fin exclue. Une fermeture
+   * « du 15 au 15 » enregistrée telle quelle s'arrêterait le 15 à minuit,
+   * c'est-à-dire la veille au soir : le salon rouvrirait le jour même où il se
+   * croit fermé. C'est le décalage d'un jour le plus classique, et il ne se
+   * voit pas dans la liste — seulement dans l'agenda.
+   */
+  const creneauxDuJour = async () => {
+    await clic('Agenda')
+    await attendre('Aujourd\'hui')
+    for (let i = 0; i < joursAvances; i++) {
+      await clic('→')
+      await new Promise((r) => setTimeout(r, 700))
+    }
+    await clic('Rendez-vous par téléphone')
+    await attendre('Nom du client')
+    await choisirPremierPraticien()
+    await new Promise((r) => setTimeout(r, 1800))
+    return (await optionsCreneau()) ?? []
+  }
+
+  const pendant = await creneauxDuJour()
+  console.log(' ', ok(pendant.length === 0),
+    `le jour fermé n'offre plus aucun créneau (${pendant.length} au lieu de ${creneaux.length})`)
+
+  await clic('Congés')
+  await attendre('Aïd')
+  await clic('Retirer')
+  await new Promise((r) => setTimeout(r, 1500))
+  console.log(' ', ok(await attendre('Aucune fermeture prévue')),
+    'la fermeture se retire — une saisie erronée ne bloque pas l\'agenda pour toujours')
+
+  const apres = await creneauxDuJour()
+  console.log(' ', ok(apres.length > 0),
+    `les créneaux reviennent une fois la fermeture retirée (${apres.length})`)
+}
+
+/* ------------------------------------------------------------------ *
+ * Sa fiche, qu'il peut enfin modifier lui-même.
+ * ------------------------------------------------------------------ */
+console.log('\n─── La fiche du salon ──────────────────────────────')
+{
+  /*
+   * Cet onglet n'existait pas.
+   *
+   * La route d'API acceptait tout depuis le début — nom, adresse, métiers,
+   * coordonnées — mais aucun écran ne l'appelait : déménager ou ajouter un
+   * métier demandait de passer par l'équipe. Pour un produit qui installe le
+   * salon puis lui rend les clés, c'était la clé qui manquait.
+   *
+   * Le test modifie ce qui compte et relit depuis l'API publique, parce que
+   * c'est là que le client verra le résultat — un formulaire qui affiche
+   * « enregistré » sans que rien ne change en base est le défaut le plus
+   * courant de ce genre d'écran.
+   */
+  await clic('Fiche')
+  console.log(' ', ok(await attendre('Vos métiers')), 'l\'onglet Fiche s\'ouvre')
+
+  const prerempli = await page.evaluate(() => {
+    const lab = [...document.querySelectorAll('label')]
+      .find((e) => e.innerText.trim().startsWith('Adresse'))
+    return lab?.querySelector('input')?.value ?? ''
+  })
+  console.log(' ', ok(prerempli.length > 0),
+    `le formulaire est prérempli avec la fiche existante (${prerempli})`)
+
+  // Les coordonnées doivent revenir de l'API : sans elles, le champ serait
+  // vide et l'enregistrement les effacerait sans que personne le veuille.
+  const point = await page.evaluate(() => {
+    const lab = [...document.querySelectorAll('label')]
+      .find((e) => e.innerText.trim().startsWith('Coordonnées GPS'))
+    return lab?.querySelector('input')?.value ?? ''
+  })
+  console.log(' ', ok(/-?\d+\.\d+\s*,\s*-?\d+\.\d+/.test(point)),
+    `les coordonnées actuelles sont relues, pas écrasées à l'aveugle (${point})`)
+
+  const NOUVELLE_ADRESSE = `12 Avenue Mohammed V ${Date.now().toString().slice(-4)}`
+  await saisir('Adresse', NOUVELLE_ADRESSE)
+  await saisir('Coordonnées GPS', '33.5892, -7.6528')
+
+  // Un salon de barbier qui se met aussi à l'onglerie : le cas exact qui
+  // rendait un institut introuvable pour deux de ses trois activités.
+  await clic('Onglerie')
+  await clic('Enregistrer')
+  console.log(' ', ok(await attendre('Fiche enregistrée')), 'l\'enregistrement est confirmé')
+
+  // Relecture côté serveur, et non côté formulaire.
+  await new Promise((r) => setTimeout(r, 1200))
+  const admin2 = await jeton('admin')
+  const liste = await (await fetch(`${API}/api/admin/salons?statut=EN_ATTENTE&size=100`,
+    { headers: { Authorization: `Bearer ${admin2}` } })).json()
+  const enBase = (liste.content ?? []).find((s) => s.nom === NOM_SALON)
+  console.log(' ', ok(enBase?.adresse === NOUVELLE_ADRESSE),
+    `l'adresse est bien enregistrée (${enBase?.adresse})`)
+  console.log(' ', ok(enBase?.metiers?.includes('ONGLERIE') && enBase?.metiers?.includes('BARBIER')),
+    `les deux métiers sont conservés (${(enBase?.metiers ?? []).join(', ')})`)
+  console.log(' ', ok(Math.abs((enBase?.latitude ?? 0) - 33.5892) < 0.001),
+    `le point relevé remplace celui du quartier (${enBase?.latitude}, ${enBase?.longitude})`)
+
+  // Le garde-fou : décocher le dernier métier laisserait le salon absent de
+  // tous les filtres, y compris celui de sa propre couleur.
+  await clic('Onglerie')
+  await clic('Barbier')
+  const restant = await page.evaluate(() =>
+    [...document.querySelectorAll('button[aria-pressed="true"]')].length)
+  console.log(' ', ok(restant >= 1), `on ne peut pas retirer son dernier métier (${restant} coché)`)
+}
 
 console.log('\n─── Bilan ──────────────────────────────────────────')
 console.log(' ', ok(erreurs.length === 0),

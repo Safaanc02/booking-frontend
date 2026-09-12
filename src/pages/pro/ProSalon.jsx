@@ -7,13 +7,17 @@ import OngletPrestations from "./OngletPrestations"
 import OngletEquipe from "./OngletEquipe"
 import OngletHoraires from "./OngletHoraires"
 import OngletAvis from "./OngletAvis"
+import OngletConges from "./OngletConges"
+import OngletFiche from "./OngletFiche"
 
 const ONGLETS = [
   ["agenda", "Agenda"],
   ["prestations", "Prestations"],
   ["equipe", "Équipe"],
   ["horaires", "Horaires"],
+  ["conges", "Congés"],
   ["avis", "Avis"],
+  ["fiche", "Fiche"],
 ]
 
 export default function ProSalon() {
@@ -29,8 +33,18 @@ export default function ProSalon() {
    * rabattait sur un 404 — un écran de gestion ne doit pas dépendre de la
    * visibilité commerciale du salon.
    */
-  const charger = useCallback(() => {
-    setEtat({ statut: "chargement", data: null, erreur: null })
+  /**
+   * Recharge le salon.
+   *
+   * `silencieux` : sans lui, un rechargement après enregistrement vidait
+   * l'écran le temps de l'aller-retour, démontait l'onglet ouvert et emportait
+   * avec lui le « Fiche enregistrée » qui venait de s'afficher. On voyait un
+   * éclair de chargement, puis un formulaire muet — impossible de savoir si
+   * quelque chose avait été écrit. La donnée arrive de la même façon, mais
+   * l'écran reste en place le temps qu'elle arrive.
+   */
+  const charger = useCallback((silencieux = false) => {
+    if (!silencieux) setEtat({ statut: "chargement", data: null, erreur: null })
     Promise.all([salonsApi.mesSalons(), prestationsApi.parSalon(id)])
       .then(([salons, prestations]) => {
         const s = salons.find((x) => String(x.id) === String(id))
@@ -42,7 +56,7 @@ export default function ProSalon() {
       .catch((erreur) => setEtat({ statut: "erreur", data: null, erreur }))
   }, [id])
 
-  useEffect(charger, [charger])
+  useEffect(() => { charger() }, [charger])
 
   if (etat.statut === "chargement") return <Loader />
   if (etat.statut === "erreur") {
@@ -78,10 +92,12 @@ export default function ProSalon() {
 
       <div className="mt-6">
         {onglet === "agenda" && <OngletAgenda salon={salon} />}
-        {onglet === "prestations" && <OngletPrestations salon={salon} onChange={charger} />}
+        {onglet === "prestations" && <OngletPrestations salon={salon} onChange={() => charger(true)} />}
         {onglet === "equipe" && <OngletEquipe salon={salon} />}
         {onglet === "horaires" && <OngletHoraires salon={salon} />}
+        {onglet === "conges" && <OngletConges salon={salon} />}
         {onglet === "avis" && <OngletAvis salon={salon} />}
+        {onglet === "fiche" && <OngletFiche salon={salon} onChange={() => charger(true)} />}
       </div>
     </div>
   )
