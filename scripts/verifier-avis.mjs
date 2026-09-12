@@ -377,6 +377,72 @@ console.log(' ', ok(await attendre('Réponse du salon')), 'la réponse est publi
 console.log(' ', ok(await attendre(REPONSE)), 'son texte est bien celui saisi')
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/avis.png', fullPage: true })
 
+/* ------------------------------------------------------------------ *
+ * L'équipe modère.
+ * ------------------------------------------------------------------ */
+console.log('\n─── Modération ─────────────────────────────────────')
+{
+  /*
+   * La route existait, aucun écran ne l'appelait : un avis injurieux restait
+   * sur la fiche du salon, et le seul recours était un appel à quelqu'un
+   * capable d'écrire une requête. Pour un salon dont la note décide des
+   * réservations, l'attente se compte en clients perdus.
+   *
+   * Le test vérifie l'effet, pas l'affichage : masquer doit retirer l'avis de
+   * la fiche publique, et republier doit l'y remettre. Un écran qui range
+   * l'avis dans un autre onglet sans que le public cesse de le voir serait la
+   * pire des deux situations — on croirait le problème réglé.
+   */
+  const admin = await browser.createBrowserContext()
+  const pageAdmin = await admin.newPage()
+  await pageAdmin.setViewport({ width: 1280, height: 1000 })
+  await pageAdmin.setCacheEnabled(false)
+
+  await pageAdmin.goto(`${BASE}/admin`, { waitUntil: 'networkidle0' })
+  await connecterSur(pageAdmin, 'admin', 'admin')
+  console.log(' ', ok(await attendreSur(pageAdmin, 'Demandes')), 'tableau de bord d\'administration')
+
+  await clicSur(pageAdmin, 'Avis')
+  console.log(' ', ok(await attendreSur(pageAdmin, 'Publiés')), 'l\'onglet de modération s\'ouvre')
+  console.log(' ', ok(await attendreSur(pageAdmin, COMMENTAIRE)),
+    'l\'avis qui vient d\'être déposé y figure')
+
+  // Masquer celui-là précisément, et non le premier bouton venu : la liste en
+  // compte des dizaines, et se tromper de ligne masquerait l'avis d'un tiers.
+  const masque = await pageAdmin.evaluate((c) => {
+    const li = [...document.querySelectorAll('li')].find((e) => e.innerText.includes(c))
+    const b = li && [...li.querySelectorAll('button')].find((x) => /masquer/i.test(x.innerText))
+    if (!b) return false
+    b.click()
+    return true
+  }, COMMENTAIRE)
+  console.log(' ', ok(masque), 'le bouton « Masquer » agit sur la bonne ligne')
+  await new Promise((r) => setTimeout(r, 1800))
+
+  await page.goto(`${BASE}/salon/${SALON}`, { waitUntil: 'networkidle0' })
+  const disparu = !(await attendre(COMMENTAIRE, 4000))
+  console.log(' ', ok(disparu), 'l\'avis masqué disparaît de la fiche publique')
+
+  await clicSur(pageAdmin, 'Masqués')
+  console.log(' ', ok(await attendreSur(pageAdmin, COMMENTAIRE)),
+    'il se retrouve dans les masqués, pas perdu')
+
+  const republie = await pageAdmin.evaluate((c) => {
+    const li = [...document.querySelectorAll('li')].find((e) => e.innerText.includes(c))
+    const b = li && [...li.querySelectorAll('button')].find((x) => /republier/i.test(x.innerText))
+    if (!b) return false
+    b.click()
+    return true
+  }, COMMENTAIRE)
+  console.log(' ', ok(republie), 'la modération est réversible')
+  await new Promise((r) => setTimeout(r, 1800))
+
+  await page.goto(`${BASE}/salon/${SALON}`, { waitUntil: 'networkidle0' })
+  console.log(' ', ok(await attendre(COMMENTAIRE)), 'l\'avis republié revient sur la fiche')
+
+  await admin.close()
+}
+
 console.log('\n─── Bilan ──────────────────────────────────────────')
 console.log(' ', ok(erreurs.length === 0),
   erreurs.length === 0 ? 'aucune erreur JavaScript' : `erreurs JS : ${erreurs.slice(0, 3).join(' | ')}`)

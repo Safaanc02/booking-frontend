@@ -1,14 +1,21 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { publicApi } from "../api/bookingApi"
 import { Boussole } from "./Glyphes"
 import { localiser } from "../lib/geolocalisation"
 
 /**
  * Villes de repli.
  *
- * Servent quand l'appel qui remonte les villes réellement couvertes n'a pas
- * abouti. Proposer une ville sans salon mène à une page vide : la liste
- * fournie par le serveur est donc toujours préférée.
+ * Servent uniquement quand l'appel qui remonte les villes réellement
+ * couvertes n'a pas abouti. Proposer une ville sans salon mène à une page vide
+ * sans que rien ne l'explique — la liste du serveur est donc toujours
+ * préférée, et ce repli n'est qu'un filet.
+ *
+ * Il a longtemps servi bien plus que cela : seule la page d'accueil passait la
+ * vraie liste, si bien que la barre des résultats proposait ces dix villes
+ * quand le réseau n'en couvrait que quatre. Six choix menaient à coup sûr
+ * nulle part. La barre va maintenant chercher la liste elle-même.
  */
 const VILLES_DEFAUT = [
   "Casablanca", "Rabat", "Marrakech", "Tanger", "Fès",
@@ -31,7 +38,25 @@ export default function SearchBar({
   const [q, setQ] = useState(valeursInitiales.q ?? "")
   const [ville, setVille] = useState(valeursInitiales.ville ?? "")
   const [localisation, setLocalisation] = useState({ etat: "repos", message: null })
-  const choix = villes?.length ? villes : VILLES_DEFAUT
+  /*
+   * Les villes couvertes, demandées au serveur si l'appelant ne les fournit
+   * pas. La réponse est mise en cache dix minutes côté serveur : la barre peut
+   * donc s'afficher sur toutes les pages sans que cela coûte un appel à
+   * chaque fois.
+   */
+  const [villesServeur, setVillesServeur] = useState(null)
+  useEffect(() => {
+    if (villes?.length) return
+    let vivant = true
+    publicApi.villes()
+      .then((liste) => { if (vivant && liste?.length) setVillesServeur(liste) })
+      // Repli silencieux sur la liste écrite en dur : une barre de recherche
+      // sans liste de villes serait pire qu'une liste imparfaite.
+      .catch(() => {})
+    return () => { vivant = false }
+  }, [villes])
+
+  const choix = villes?.length ? villes : (villesServeur ?? VILLES_DEFAUT)
   const hero = variante === "hero"
 
   const soumettre = (e) => {

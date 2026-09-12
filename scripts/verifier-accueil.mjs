@@ -208,6 +208,44 @@ for (const [nom, largeur, hauteur] of [['mobile', 390, 844], ['tablette', 768, 1
 }
 
 /* ------------------------------------------------------------------ *
+ * La liste des villes ne propose que des villes couvertes.
+ * ------------------------------------------------------------------ */
+console.log()
+console.log('─── Les villes proposées ───────────────────────────')
+{
+  /*
+   * Seule la page d'accueil passait la liste réelle à la barre de recherche.
+   * Ailleurs, elle retombait sur dix villes écrites en dur quand le réseau
+   * n'en couvrait que quatre : six choix menaient à coup sûr sur une page
+   * vide, sans que rien ne l'explique. Le repli existe toujours, mais il ne
+   * sert plus qu'en cas de serveur muet.
+   */
+  const couvertes = await (await fetch(`${API}/api/public/villes`)).json()
+
+  const lire = async (chemin) => {
+    const q = await browser.newPage()
+    await q.setViewport({ width: 1440, height: 950 })
+    await q.setCacheEnabled(false)
+    q.on('pageerror', (e) => erreurs.push(String(e)))
+    await q.goto(`${BASE}${chemin}`, { waitUntil: 'networkidle0' })
+    await pause(2000)
+    const options = await q.evaluate(() =>
+      [...(document.querySelector('select')?.options ?? [])]
+        .map((o) => o.value).filter(Boolean))
+    await q.close()
+    return options
+  }
+
+  for (const [nom, chemin] of [['accueil', '/'], ['résultats', '/recherche']]) {
+    const proposees = await lire(chemin)
+    const fantomes = proposees.filter((v) => !couvertes.includes(v))
+    dire(proposees.length > 0, `${nom} : la liste des villes est remplie (${proposees.length})`)
+    dire(fantomes.length === 0,
+      `${nom} : aucune ville sans salon proposée${fantomes.length ? ` — ${fantomes.join(', ')}` : ''}`)
+  }
+}
+
+/* ------------------------------------------------------------------ *
  * La carte du salon en vedette ne disparaît plus en silence.
  * ------------------------------------------------------------------ */
 console.log()

@@ -177,6 +177,12 @@ export const adminApi = {
     client.post("/api/admin/salons", payload).then((r) => r.data),
 
   /** File commerciale. `statut` : NOUVELLE, CONTACTEE, QUALIFIEE, CONVERTIE, PERDUE. */
+  /** Modération a posteriori : un avis est publié d'emblée, masqué s'il dérape. */
+  avis: (statut = "PUBLIE", page = 0) =>
+    client.get("/api/admin/avis", { params: { statut, page, size: 50 } }).then((r) => r.data),
+  modererAvis: (id, statut) =>
+    client.patch(`/api/admin/avis/${id}/statut`, null, { params: { statut } }).then((r) => r.data),
+
   demandes: (statut = "NOUVELLE", page = 0) =>
     client.get("/api/admin/demandes-demo", { params: { statut, page, size: 50 } })
       .then((r) => r.data),

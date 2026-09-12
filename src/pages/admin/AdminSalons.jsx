@@ -4,6 +4,7 @@ import { telephone } from "../../lib/format"
 import Loader, { EmptyState, ErrorState } from "../../components/Loader"
 import ReferencerSalon from "./ReferencerSalon"
 import AdminDemandes from "./AdminDemandes"
+import AdminAvis from "./AdminAvis"
 
 const ONGLETS = [
   ["DEMANDES", "Demandes"],
@@ -11,6 +12,7 @@ const ONGLETS = [
   ["EN_ATTENTE", "À valider"],
   ["ACTIF", "En ligne"],
   ["SUSPENDU", "Suspendus"],
+  ["AVIS", "Avis"],
 ]
 
 /**
@@ -26,7 +28,7 @@ export default function AdminSalons() {
   /** Demande servant de point de départ au référencement, le cas échéant. */
   const [depuis, setDepuis] = useState(null)
   // Seuls les onglets de la file des salons portent un statut de salon.
-  const statut = onglet === "REFERENCER" || onglet === "DEMANDES" ? null : onglet
+  const statut = ["REFERENCER", "DEMANDES", "AVIS"].includes(onglet) ? null : onglet
   const [etat, setEtat] = useState({ statut: "chargement", data: [], erreur: null })
   const [action, setAction] = useState({ id: null, erreur: null })
 
@@ -105,6 +107,7 @@ export default function AdminSalons() {
         {onglet === "REFERENCER" && (
           <ReferencerSalon key={depuis?.id ?? "vierge"} demande={depuis} />
         )}
+        {onglet === "AVIS" && <AdminAvis />}
 
         {statut && etat.statut === "chargement" && <Loader />}
         {statut && etat.statut === "erreur" && (
