@@ -255,6 +255,43 @@ console.log(' ', ok(await attendre('Mes réservations')), 'compte accessible')
 console.log(' ', ok(await attendre('Donner mon avis')),
   'le dépôt n\'est proposé que sur un rendez-vous honoré')
 
+/*
+ * Le lien du courriel de sollicitation doit tenir ce qu'il promet.
+ *
+ * Le bouton du courriel s'intitule « Donner mon avis » et pointe
+ * /compte?avis=<id>. Il déposait sur une page où il fallait retrouver le bon
+ * rendez-vous parmi les autres — un historique en compte des dizaines — puis
+ * cliquer une seconde fois. Un lien qui n'ouvre pas ce qu'il annonce coûte
+ * l'avis qu'il demandait, et c'est tout l'objet de ce courriel.
+ */
+{
+  await page.goto(`${BASE}/compte?avis=${rdv.id}`, { waitUntil: 'networkidle0' })
+  await attendre('Mes réservations')
+  await new Promise((r) => setTimeout(r, 900))
+
+  const ouvert = await page.evaluate((id) => {
+    const li = document.querySelector(`[data-reservation-id="${id}"]`)
+    return Boolean(li && /Votre note/i.test(li.innerText))
+  }, rdv.id)
+  console.log(' ', ok(ouvert), 'le lien du courriel ouvre directement le bon formulaire')
+
+  const seul = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-reservation-id]')]
+      .filter((li) => /Votre note/i.test(li.innerText)).length)
+  console.log(' ', ok(seul === 1),
+    `il n'ouvre que celui-là, pas tous les rendez-vous (${seul} formulaire ouvert)`)
+
+  // Sans le paramètre, rien ne s'ouvre : le formulaire reste replié tant que
+  // le client ne l'a pas demandé.
+  await page.goto(`${BASE}/compte`, { waitUntil: 'networkidle0' })
+  await attendre('Mes réservations')
+  await new Promise((r) => setTimeout(r, 700))
+  const replie = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-reservation-id]')]
+      .every((li) => !/Votre note/i.test(li.innerText)))
+  console.log(' ', ok(replie), 'sans le lien, le formulaire reste replié')
+}
+
 await clic('Donner mon avis')
 await attendre('Votre note')
 // Les étoiles sont de vrais boutons radio : on coche le quatrième.

@@ -20,6 +20,14 @@ const ACTIVE = new Set(["EN_ATTENTE", "CONFIRMEE"])
 export default function Account() {
   const { authenticated, ready, login, user } = useAuth()
   const [params] = useSearchParams()
+  /**
+   * Rendez-vous dont le courriel de sollicitation demande l'avis.
+   *
+   * L'historique peut compter des dizaines de lignes : ouvrir le bon
+   * formulaire ne suffit pas s'il se trouve trois écrans plus bas. On y amène
+   * donc la page, une fois les réservations chargées.
+   */
+  const avisDemande = params.get("avis")
   const [etat, setEtat] = useState({ statut: "chargement", data: [], erreur: null })
   const [action, setAction] = useState({ id: null, erreur: null })
 
@@ -33,6 +41,17 @@ export default function Account() {
   }, [authenticated])
 
   useEffect(charger, [charger])
+
+  useEffect(() => {
+    if (!avisDemande || etat.statut !== "ok") return
+    // La liste vient d'être rendue : on attend une image pour que l'élément
+    // existe, sinon le défilement porte sur une page encore vide.
+    const t = setTimeout(() => {
+      document.getElementById(`reservation-${avisDemande}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" })
+    }, 150)
+    return () => clearTimeout(t)
+  }, [avisDemande, etat.statut])
 
   const annuler = (id) => {
     setAction({ id, erreur: null })
@@ -93,14 +112,14 @@ export default function Account() {
           <Section titre="À venir" liste={aVenir} onAnnuler={annuler} enCours={action.id} annulable />
         )}
         {etat.statut === "ok" && passees.length > 0 && (
-          <Section titre="Historique" liste={passees} onAvis={charger} />
+          <Section titre="Historique" liste={passees} onAvis={charger} avisDemande={avisDemande} />
         )}
       </div>
     </div>
   )
 }
 
-function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis }) {
+function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis, avisDemande = null }) {
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-400">{titre}</h2>
@@ -114,6 +133,9 @@ function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis }
               // de vérification. Deux réservations peuvent partager le même
               // jour et la même heure : un repérage par texte est ambigu.
               data-reservation-id={r.id}
+              // id : cible du défilement quand on arrive du courriel de
+              // demande d'avis, qui pointe une réservation précise.
+              id={`reservation-${r.id}`}
               className="flex flex-wrap items-start justify-between gap-4 p-5"
             >
               <div className="min-w-0">
@@ -157,7 +179,11 @@ function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis }
                 <div className="w-full">
                   {r.avisDepose
                     ? <p className="text-xs text-stone-400">Merci, votre avis a bien été enregistré.</p>
-                    : <FormulaireAvis reservationId={r.id} onDepose={onAvis} />}
+                    : <FormulaireAvis
+                        reservationId={r.id}
+                        onDepose={onAvis}
+                        ouvertDoffice={String(r.id) === avisDemande}
+                      />}
                 </div>
               )}
             </li>
@@ -168,9 +194,17 @@ function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis }
   )
 }
 
-/** Dépôt d'un avis, replié tant que le client ne l'a pas demandé. */
-function FormulaireAvis({ reservationId, onDepose }) {
-  const [ouvert, setOuvert] = useState(false)
+/**
+ * Dépôt d'un avis, replié tant que le client ne l'a pas demandé.
+ *
+ * Sauf quand il arrive du courriel de sollicitation : celui-ci promet « Donner
+ * mon avis » en un clic, et déposait jusqu'ici sur une page où il fallait
+ * retrouver le bon rendez-vous parmi les autres, puis cliquer une seconde
+ * fois. Un lien qui ne tient pas ce qu'il annonce coûte l'avis qu'il
+ * demandait.
+ */
+function FormulaireAvis({ reservationId, onDepose, ouvertDoffice = false }) {
+  const [ouvert, setOuvert] = useState(ouvertDoffice)
   const [note, setNote] = useState(0)
   const [commentaire, setCommentaire] = useState("")
   const [envoi, setEnvoi] = useState({ enCours: false, erreur: null })
