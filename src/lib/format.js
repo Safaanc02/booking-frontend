@@ -56,3 +56,28 @@ export const isoDate = (d) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
+
+/**
+ * « aujourd'hui 16:30 », « demain 09:00 », « lundi 09:00 », « 24 sept. 09:00 ».
+ *
+ * La précision suit l'utilité. Aujourd'hui et demain sont les deux réponses
+ * qui font cliquer, et elles se disent mieux ainsi qu'avec une date. Au-delà
+ * d'une semaine, le jour de la semaine ne situe plus rien — « lundi » peut
+ * être dans dix jours — et il faut une date.
+ */
+export const quandLibre = (dateIso, heure) => {
+  if (!dateIso || !heure) return null
+
+  const jour = new Date(`${dateIso}T12:00:00`)
+  const aujourdhui = new Date()
+  aujourdhui.setHours(12, 0, 0, 0)
+  const ecart = Math.round((jour - aujourdhui) / 86400000)
+  const hhmm = String(heure).slice(0, 5)
+
+  if (ecart <= 0) return `aujourd'hui ${hhmm}`
+  if (ecart === 1) return `demain ${hhmm}`
+  if (ecart <= 6) {
+    return `${jour.toLocaleDateString("fr-MA", { weekday: "long", timeZone: ZONE })} ${hhmm}`
+  }
+  return `${jour.toLocaleDateString("fr-MA", { day: "numeric", month: "short", timeZone: ZONE })} ${hhmm}`
+}

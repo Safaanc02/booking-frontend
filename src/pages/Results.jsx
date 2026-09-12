@@ -69,6 +69,14 @@ export default function Results() {
   const rayon = Number(params.get("rayon")) || RAYON_DEFAUT
 
   const [etat, setEtat] = useState({ statut: "chargement", data: null, erreur: null })
+  /**
+   * Premier créneau libre de chaque salon de la page.
+   *
+   * Chargé après la liste, et non avec elle : la disponibilité enrichit des
+   * cartes déjà visibles, elle ne doit pas retarder leur affichage. Un échec
+   * ne se voit donc pas — les cartes restent, simplement sans cette ligne.
+   */
+  const [dispos, setDispos] = useState({})
 
   const charger = useCallback(() => {
     setEtat({ statut: "chargement", data: null, erreur: null })
@@ -77,7 +85,12 @@ export default function Results() {
         q, ville, metier,
         ...(situee ? { lat, lng, rayon } : {}),
       })
-      .then((data) => setEtat({ statut: "ok", data, erreur: null }))
+      .then((data) => {
+        setEtat({ statut: "ok", data, erreur: null })
+        const ids = (data.content ?? []).map((s) => s.id)
+        setDispos({})
+        publicApi.premiersCreneaux(ids).then(setDispos).catch(() => setDispos({}))
+      })
       .catch((erreur) => setEtat({ statut: "erreur", data: null, erreur }))
   }, [q, ville, metier, situee, lat, lng, rayon])
 
@@ -237,6 +250,7 @@ export default function Results() {
                     salon={s}
                     villeFiltree={Boolean(ville)}
                     metierFiltre={metier || null}
+                    dispo={dispos[s.id] ?? null}
                   />
                 ))}
               </div>

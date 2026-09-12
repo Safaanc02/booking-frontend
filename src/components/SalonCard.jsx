@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { prix as formatPrix } from "../lib/format"
+import { prix as formatPrix, quandLibre } from "../lib/format"
 import { libelleMetier, metiersDuSalon } from "../lib/metiers"
 import Couverture from "./Couverture"
 import { Boussole } from "./Glyphes"
@@ -33,7 +33,7 @@ import { distanceLisible } from "../lib/geolocalisation"
  * La ville disparaît quand la recherche la filtre déjà : dans une liste
  * « Casablanca », l'étiquette Casablanca sur chaque carte n'apprend rien.
  */
-export default function SalonCard({ salon, villeFiltree = false, metierFiltre = null }) {
+export default function SalonCard({ salon, villeFiltree = false, metierFiltre = null, dispo = null }) {
   const note = salon.noteMoyenne && salon.nombreAvis
   /*
    * Le métier filtré passe en tête.
@@ -51,6 +51,15 @@ export default function SalonCard({ salon, villeFiltree = false, metierFiltre = 
   // Nulle hors d'une recherche par proximité : un salon n'a pas de distance
   // dans l'absolu.
   const distance = distanceLisible(salon.distanceKm)
+  /*
+   * Le premier créneau libre, s'il est connu.
+   *
+   * Nul veut dire « pas encore chargé » ou « rien dans les sept jours », et
+   * la carte ne dit alors rien du tout. Écrire « complet » serait faux dans le
+   * premier cas, et décourageant dans le second alors que le salon rouvre
+   * peut-être le huitième jour.
+   */
+  const libre = quandLibre(dispo?.date, dispo?.premiereHeure)
 
   return (
     <Link
@@ -105,6 +114,15 @@ export default function SalonCard({ salon, villeFiltree = false, metierFiltre = 
           {salon.adresse}
           {lieu && <span className="text-stone-400"> · {lieu}</span>}
         </p>
+
+        {libre && (
+          /* Entre l'adresse et le prix : on lit un salon dans cet ordre —
+             qui, où, quand, combien. */
+          <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+            <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Libre {libre}
+          </p>
+        )}
 
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-stone-100 pt-3">
           {salon.prixMin != null ? (

@@ -36,6 +36,21 @@ export const publicApi = {
         nonSitues: Number(r.headers["x-salons-non-situes"] ?? 0) || 0,
       })),
 
+  /**
+   * Premier créneau libre de plusieurs salons, en un appel.
+   *
+   * Une carte qui affiche un prix sans disponibilité oblige à ouvrir les
+   * fiches une par une pour découvrir que la première est complète jusqu'à
+   * jeudi. Demandé pour toute la page d'un coup : vingt cartes qui
+   * interrogeraient chacune le moteur rempliraient la liste par saccades.
+   */
+  premiersCreneaux: (ids, jours = 7) =>
+    ids.length === 0
+      ? Promise.resolve({})
+      : client
+          .get("/api/public/salons/prochaines-dispos", { params: { ids: ids.join(","), jours } })
+          .then((r) => r.data),
+
   ficheSalon: (id) => client.get(`/api/public/salons/${id}`).then((r) => r.data),
 
   /** Praticiens sachant réaliser cette prestation, avec leur durée effective. */
@@ -177,12 +192,6 @@ export const adminApi = {
     client.post("/api/admin/salons", payload).then((r) => r.data),
 
   /** File commerciale. `statut` : NOUVELLE, CONTACTEE, QUALIFIEE, CONVERTIE, PERDUE. */
-  /** Modération a posteriori : un avis est publié d'emblée, masqué s'il dérape. */
-  avis: (statut = "PUBLIE", page = 0) =>
-    client.get("/api/admin/avis", { params: { statut, page, size: 50 } }).then((r) => r.data),
-  modererAvis: (id, statut) =>
-    client.patch(`/api/admin/avis/${id}/statut`, null, { params: { statut } }).then((r) => r.data),
-
   demandes: (statut = "NOUVELLE", page = 0) =>
     client.get("/api/admin/demandes-demo", { params: { statut, page, size: 50 } })
       .then((r) => r.data),
@@ -192,6 +201,7 @@ export const adminApi = {
     client.patch(`/api/admin/demandes-demo/${id}`, null, { params: { statut, note } })
       .then((r) => r.data),
 
+  /** Modération a posteriori : un avis est publié d'emblée, masqué s'il dérape. */
   avis: (statut = "PUBLIE", page = 0) =>
     client.get("/api/admin/avis", { params: { statut, page, size: 50 } }).then((r) => r.data),
   modererAvis: (avisId, statut) =>

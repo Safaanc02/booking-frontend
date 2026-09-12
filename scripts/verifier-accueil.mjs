@@ -208,6 +208,59 @@ for (const [nom, largeur, hauteur] of [['mobile', 390, 844], ['tablette', 768, 1
 }
 
 /* ------------------------------------------------------------------ *
+ * Les résultats annoncent quand, pas seulement combien.
+ * ------------------------------------------------------------------ */
+console.log()
+console.log('─── La prochaine disponibilité ─────────────────────')
+{
+  /*
+   * La carte disait le prix et taisait la disponibilité : on ouvrait les
+   * fiches une par une pour découvrir que la première est complète jusqu'à
+   * jeudi. Le contrat d'API l'annonçait depuis le début.
+   *
+   * Le test compare ce qu'affiche la carte à ce que répond le moteur, et non
+   * à une chaîne attendue : une carte qui annoncerait « libre demain » quand
+   * le moteur n'a rien avant lundi serait pire que le silence d'avant.
+   */
+  const ville = (await (await fetch(`${API}/api/public/villes`)).json())[0]
+  const recherche = await (await fetch(
+    `${API}/api/public/salons?ville=${encodeURIComponent(ville)}&size=20`)).json()
+  const ids = (recherche.content ?? []).map((s) => s.id)
+  const attendues = await (await fetch(
+    `${API}/api/public/salons/prochaines-dispos?ids=${ids.join(',')}`)).json()
+
+  const q = await browser.newPage()
+  await q.setViewport({ width: 1440, height: 950 })
+  await q.setCacheEnabled(false)
+  q.on('pageerror', (e) => erreurs.push(String(e)))
+  await q.goto(`${BASE}/recherche?ville=${encodeURIComponent(ville)}`, { waitUntil: 'networkidle0' })
+  await pause(3000)
+
+  const cartes = await q.evaluate(() =>
+    [...document.querySelectorAll('a[href^="/salon/"]')].map((c) => ({
+      id: Number(c.getAttribute('href').split('/').pop()),
+      libre: (c.innerText.match(/Libre ([^\n]+)/) ?? [])[1] ?? null,
+    })))
+  await q.close()
+
+  const avecDispo = cartes.filter((c) => c.libre)
+  dire(cartes.length > 0, `${cartes.length} carte(s) affichée(s) à ${ville}`)
+  dire(avecDispo.length === Object.keys(attendues).filter((id) => ids.includes(Number(id))).length,
+    `autant de disponibilités affichées que le moteur en connaît (${avecDispo.length})`)
+  dire(cartes.every((c) => Boolean(c.libre) === Boolean(attendues[c.id])),
+    'aucune carte n\'annonce une disponibilité que le moteur ignore, ni l\'inverse')
+
+  // « aujourd'hui » et « demain » plutôt qu'une date : ce sont les deux
+  // réponses qui font cliquer, et une date les dirait moins bien.
+  const aujourdhui = avecDispo.filter((c) => {
+    const d = attendues[c.id]?.date
+    return d === new Date().toISOString().slice(0, 10)
+  })
+  dire(aujourdhui.every((c) => /aujourd.hui/i.test(c.libre)),
+    `le jour même se dit « aujourd'hui » (${aujourdhui.length} carte(s))`)
+}
+
+/* ------------------------------------------------------------------ *
  * La liste des villes ne propose que des villes couvertes.
  * ------------------------------------------------------------------ */
 console.log()
