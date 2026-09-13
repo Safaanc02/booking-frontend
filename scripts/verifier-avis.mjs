@@ -314,6 +314,29 @@ console.log(' ', ok(await attendre('votre avis a bien été enregistré')),
   'avis enregistré, le formulaire ne réapparaît plus')
 
 console.log('\n─── L\'avis apparaît côté public ────────────────────')
+
+/*
+ * On attend que l'écriture soit lisible avant d'ouvrir la fiche.
+ *
+ * La suite naviguait dans la foulée du dépôt et lisait parfois la page telle
+ * qu'elle était juste avant — « 19 avis » là où l'API en comptait déjà vingt,
+ * et le commentaire absent. Une course dans le test, pas dans le produit : la
+ * note moyenne est dénormalisée et recalculée à l'enregistrement, mais rien
+ * ne garantit qu'un navigateur lancé à la milliseconde suivante voie le
+ * résultat. On interroge donc l'API jusqu'à l'y trouver.
+ */
+{
+  const limite = Date.now() + 10000
+  let vu = false
+  while (!vu && Date.now() < limite) {
+    const page1 = await (await fetch(
+      `${API}/api/public/salons/${SALON}/avis?page=0&size=10`)).json().catch(() => null)
+    vu = (page1?.content ?? []).some((a) => a.commentaire === COMMENTAIRE)
+    if (!vu) await new Promise((r) => setTimeout(r, 400))
+  }
+  console.log(' ', ok(vu), 'l\'avis est lisible par l\'API avant qu\'on ouvre la fiche')
+}
+
 await page.goto(`${BASE}/salon/${SALON}`, { waitUntil: 'networkidle0' })
 console.log(' ', ok(await attendre('Avis clients')), 'section présente sur la fiche')
 console.log(' ', ok(await attendre(COMMENTAIRE)), 'le commentaire est visible')

@@ -422,6 +422,58 @@ const siens = await (await fetch(`${API}/api/salons/me`, {
 dire(Array.isArray(siens) && siens.length === 1 && siens[0].nom === SALON,
   `il ne gère que son salon (${Array.isArray(siens) ? siens.length : '?'} salon)`)
 
+/* ------------------------------------------------------------------ *
+ * Le tableau de bord voit le salon qu'on vient d'installer.
+ * ------------------------------------------------------------------ */
+console.log()
+console.log('─── Le tableau de bord ─────────────────────────────')
+{
+  /*
+   * Un salon référencé est en ligne et n'a encore rien reçu : il doit
+   * apparaître aussitôt dans la liste des salons dormants, marqué
+   * « installation à terminer » puisque son catalogue est vide.
+   *
+   * C'est tout l'intérêt de l'écran. Un salon installé qui ne reçoit aucune
+   * réservation ne restera pas — il ne verra jamais ce que le produit lui
+   * apporte, et partira sans rien dire. Le seul indicateur du tableau qu'on
+   * peut encore rattraper, à condition de savoir qui appeler.
+   */
+  const admin = (await (await fetch(
+    `${KC}/realms/booking-realm/protocol/openid-connect/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: 'booking-app', username: 'admin', password: 'admin', grant_type: 'password',
+      }),
+    })).json()).access_token
+  const bord = await (await fetch(`${API}/api/admin/tableau-de-bord?jours=30`,
+    { headers: { Authorization: `Bearer ${admin}` } })).json()
+
+  dire(typeof bord.reseau?.ACTIF === 'number',
+    `le réseau est compté par statut (${bord.reseau?.ACTIF} en ligne)`)
+  dire(typeof bord.volumeMad !== 'undefined', `le volume honoré est calculé (${bord.volumeMad} MAD)`)
+
+  const dormant = (bord.salonsDormants ?? []).find((s) => s.nom === SALON)
+  dire(Boolean(dormant), 'le salon tout juste installé figure parmi ceux qui n\'ont rien reçu')
+  dire(dormant?.catalogueVide === true,
+    'et il est marqué « installation à terminer », son catalogue étant vide')
+  dire(dormant?.derniereReservation === null,
+    'sans dernière réservation, puisqu\'il n\'en a jamais eu')
+
+  /*
+   * Le taux de conversion se rapporte aux demandes tranchées, pas au total.
+   *
+   * Le compter sur le total ferait baisser l'indicateur à chaque nouvelle
+   * demande reçue — c'est-à-dire précisément quand les choses vont bien. Un
+   * indicateur qui empire quand on réussit n'est pas un indicateur.
+   */
+  const f = bord.fileCommerciale ?? {}
+  const tranchees = (f.CONVERTIE ?? 0) + (f.PERDUE ?? 0)
+  const attendu = tranchees === 0 ? null : Math.round((100 * (f.CONVERTIE ?? 0)) / tranchees)
+  dire(bord.tauxConversionPourcent === attendu,
+    `le taux porte sur les demandes tranchées (${bord.tauxConversionPourcent}% pour ${tranchees} tranchée(s))`)
+}
+
 console.log()
 console.log('─── Journal du navigateur ──────────────────────────')
 dire(erreurs.length === 0, `aucune exception JavaScript${erreurs.length ? ` (${erreurs.length})` : ''}`)

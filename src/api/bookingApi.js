@@ -230,6 +230,10 @@ export const adminApi = {
   referencerSalon: (payload) =>
     client.post("/api/admin/salons", payload).then((r) => r.data),
 
+  /** L'état de la plateforme, sur une fenêtre glissante. */
+  tableauDeBord: (jours = 30) =>
+    client.get("/api/admin/tableau-de-bord", { params: { jours } }).then((r) => r.data),
+
   /** File commerciale. `statut` : NOUVELLE, CONTACTEE, QUALIFIEE, CONVERTIE, PERDUE. */
   demandes: (statut = "NOUVELLE", page = 0) =>
     client.get("/api/admin/demandes-demo", { params: { statut, page, size: 50 } })

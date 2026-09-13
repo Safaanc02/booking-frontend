@@ -5,6 +5,7 @@ import Loader, { EmptyState, ErrorState } from "../../components/Loader"
 import ReferencerSalon from "./ReferencerSalon"
 import AdminDemandes from "./AdminDemandes"
 import AdminAvis from "./AdminAvis"
+import AdminTableauDeBord from "./AdminTableauDeBord"
 
 const ONGLETS = [
   ["DEMANDES", "Demandes"],
@@ -13,6 +14,13 @@ const ONGLETS = [
   ["ACTIF", "En ligne"],
   ["SUSPENDU", "Suspendus"],
   ["AVIS", "Avis"],
+  // Le tableau de bord en dernier, et non en premier.
+  //
+  // Qui ouvre cet écran tous les jours, c'est le conseiller, et son travail
+  // est la file des demandes — d'où l'ordre ci-dessus. Un tableau de bord en
+  // tête lui ferait cliquer par-dessus chaque matin pour atteindre ce qu'il
+  // vient faire. Il est consulté une fois par semaine, pas vingt fois par jour.
+  ["TABLEAU", "Tableau de bord"],
 ]
 
 /**
@@ -28,7 +36,7 @@ export default function AdminSalons() {
   /** Demande servant de point de départ au référencement, le cas échéant. */
   const [depuis, setDepuis] = useState(null)
   // Seuls les onglets de la file des salons portent un statut de salon.
-  const statut = ["REFERENCER", "DEMANDES", "AVIS"].includes(onglet) ? null : onglet
+  const statut = ["REFERENCER", "DEMANDES", "AVIS", "TABLEAU"].includes(onglet) ? null : onglet
   const [etat, setEtat] = useState({ statut: "chargement", data: [], erreur: null })
   const [action, setAction] = useState({ id: null, erreur: null })
 
@@ -107,6 +115,7 @@ export default function AdminSalons() {
         {onglet === "REFERENCER" && (
           <ReferencerSalon key={depuis?.id ?? "vierge"} demande={depuis} />
         )}
+        {onglet === "TABLEAU" && <AdminTableauDeBord />}
         {onglet === "AVIS" && <AdminAvis />}
 
         {statut && etat.statut === "chargement" && <Loader />}
