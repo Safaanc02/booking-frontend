@@ -173,6 +173,26 @@ export const proApi = {
    */
   absences: (salonId) => client.get(`/api/pro/salons/${salonId}/absences`).then((r) => r.data),
 
+  /* ---------- Fiches clients ---------- */
+
+  clients: (salonId, q) =>
+    client.get(`/api/pro/salons/${salonId}/clients`, { params: { q: q || undefined } })
+      .then((r) => r.data),
+  ficheClient: (salonId, cle) =>
+    client.get(`/api/pro/salons/${salonId}/clients/fiche`, { params: { cle } }).then((r) => r.data),
+  /**
+   * La note du salon sur un client. Un texte vide l'efface.
+   *
+   * Envoyée en texte brut : c'est une phrase, pas un objet, et l'emballer dans
+   * un JSON obligerait l'interface à échapper des guillemets qu'un carnet
+   * contient naturellement.
+   */
+  noterClient: (salonId, cle, texte) =>
+    client.put(`/api/pro/salons/${salonId}/clients/note`, texte ?? "", {
+      params: { cle },
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    }).then((r) => r.data),
+
   /* ---------- Photos ---------- */
 
   photos: (salonId) => client.get(`/api/pro/salons/${salonId}/photos`).then((r) => r.data),

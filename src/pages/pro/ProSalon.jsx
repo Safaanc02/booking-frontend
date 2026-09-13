@@ -7,6 +7,7 @@ import OngletPrestations from "./OngletPrestations"
 import OngletEquipe from "./OngletEquipe"
 import OngletHoraires from "./OngletHoraires"
 import OngletAvis from "./OngletAvis"
+import OngletClients from "./OngletClients"
 import OngletConges from "./OngletConges"
 import OngletFiche from "./OngletFiche"
 
@@ -15,6 +16,7 @@ const ONGLETS = [
   ["prestations", "Prestations"],
   ["equipe", "Équipe"],
   ["horaires", "Horaires"],
+  ["clients", "Clients"],
   ["conges", "Congés"],
   ["avis", "Avis"],
   ["fiche", "Fiche"],
@@ -95,6 +97,7 @@ export default function ProSalon() {
         {onglet === "prestations" && <OngletPrestations salon={salon} onChange={() => charger(true)} />}
         {onglet === "equipe" && <OngletEquipe salon={salon} />}
         {onglet === "horaires" && <OngletHoraires salon={salon} />}
+        {onglet === "clients" && <OngletClients salon={salon} />}
         {onglet === "conges" && <OngletConges salon={salon} />}
         {onglet === "avis" && <OngletAvis salon={salon} />}
         {onglet === "fiche" && <OngletFiche salon={salon} onChange={() => charger(true)} />}

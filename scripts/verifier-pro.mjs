@@ -323,6 +323,101 @@ if (creneaux.length > 0) {
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/pro-agenda.png', fullPage: true })
 
 /* ------------------------------------------------------------------ *
+ * Les fiches clients.
+ * ------------------------------------------------------------------ */
+console.log('\n─── Fiches clients ─────────────────────────────────')
+{
+  /*
+   * Tout se calcule depuis les réservations : rien n'est tenu à jour en
+   * parallèle, donc rien ne peut dériver. Le test s'appuie sur le rendez-vous
+   * pris par téléphone plus haut — c'est la seule fiche dont on connaît
+   * exactement le contenu.
+   */
+  await clic('Clients')
+  // Le champ de recherche porte un aria-label, pas un libellé visible : c'est
+  // sa présence qu'on constate, pas un texte à l'écran.
+  const champRecherche = await page.waitForSelector('input[aria-label="Chercher un client"]',
+    { timeout: ATTENTE }).catch(() => null)
+  console.log(' ', ok(Boolean(champRecherche)), 'l\'onglet Clients s\'ouvre')
+  console.log(' ', ok(await attendre('Mme Bennani')),
+    'le rendez-vous pris au téléphone a créé une fiche, sans qu\'on la saisisse')
+
+  // La recherche porte sur la fiche agrégée, pas sur les réservations : taper
+  // un nom doit trouver la personne, même si ses rendez-vous sont anciens.
+  await page.evaluate(() => {
+    const champ = document.querySelector('input[aria-label="Chercher un client"]')
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(champ, 'Bennani')
+    champ.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await new Promise((r) => setTimeout(r, 1200))
+  const trouvee = await page.evaluate(() =>
+    [...document.querySelectorAll('li button')].map((b) => b.innerText).join(' | '))
+  console.log(' ', ok(/Bennani/.test(trouvee) && !/Alaoui/.test(trouvee)),
+    'la recherche par nom ne rend que la bonne fiche')
+
+  await clic('Mme Bennani')
+  console.log(' ', ok(await attendre('Votre note')), 'la fiche s\'ouvre')
+  console.log(' ', ok(await attendre('Historique')), 'l\'historique y figure')
+  console.log(' ', ok(await attendre('0670112233') || await attendre('06 70 11 22 33')),
+    'le numéro est rappelé, et cliquable pour appeler')
+
+  /*
+   * La note est privée, et l'écran doit le dire.
+   *
+   * « Toujours en retard », « préfère Sofia » : ces phrases sont écrites pour
+   * un carnet. Les partager entre salons ferait suivre un client d'un
+   * établissement à l'autre avec une réputation qu'il n'a pas choisie et que
+   * personne ne lui a montrée.
+   */
+  console.log(' ', ok(await attendre('Aucun autre salon ne la lit')),
+    'l\'écran annonce que la note ne sort pas du salon')
+
+  const NOTE = `Préfère le samedi matin ${Date.now().toString().slice(-4)}`
+  await page.evaluate((n) => {
+    const ta = document.querySelector('textarea')
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(ta, n)
+    ta.dispatchEvent(new Event('input', { bubbles: true }))
+  }, NOTE)
+  await clic('Enregistrer')
+  console.log(' ', ok(await attendre('Note enregistrée')), 'la note s\'enregistre')
+
+  // Relue depuis le serveur, et non depuis le champ qu'on vient de remplir.
+  const tokenPro2 = await jeton(IDENTIFIANT)
+  const idSalon2 = Number(page.url().match(/\/pro\/salons?\/(\d+)/)?.[1])
+  const relue = await (await fetch(
+    `${API}/api/pro/salons/${idSalon2}/clients/fiche?cle=0670112233`,
+    { headers: { Authorization: `Bearer ${tokenPro2}` } })).json()
+  console.log(' ', ok(relue.note === NOTE), 'elle revient du serveur telle qu\'écrite')
+  console.log(' ', ok(relue.visites >= 0 && Array.isArray(relue.historique)),
+    `la fiche porte ses compteurs et son historique (${relue.visites} visite(s), ${relue.historique?.length} ligne(s))`)
+
+  // Un autre salon ne doit pas voir cette note, même pour le même numéro.
+  const admin3 = await jeton('admin')
+  const autres = await (await fetch(`${API}/api/admin/salons?statut=ACTIF&size=50`,
+    { headers: { Authorization: `Bearer ${admin3}` } })).json()
+  const autreSalon = (autres.content ?? []).find((s) => s.id !== idSalon2)
+  if (autreSalon) {
+    const chezLAutre = await (await fetch(
+      `${API}/api/pro/salons/${autreSalon.id}/clients`,
+      { headers: { Authorization: `Bearer ${admin3}` } })).json()
+    console.log(' ', ok(!JSON.stringify(chezLAutre).includes(NOTE)),
+      `la note reste invisible chez ${autreSalon.nom}`)
+  }
+
+  // Une note vide efface : une chaîne vide qui subsiste laisse croire qu'il y
+  // a quelque chose à lire, et fait rouvrir la fiche pour rien.
+  await fetch(`${API}/api/pro/salons/${idSalon2}/clients/note?cle=0670112233`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${tokenPro2}`, 'Content-Type': 'text/plain; charset=utf-8' },
+    body: '   ',
+  })
+  const apresEffacement = await (await fetch(
+    `${API}/api/pro/salons/${idSalon2}/clients/fiche?cle=0670112233`,
+    { headers: { Authorization: `Bearer ${tokenPro2}` } })).json()
+  console.log(' ', ok(apresEffacement.note === null), 'une note vide efface, elle ne laisse pas de trace')
+}
+
+/* ------------------------------------------------------------------ *
  * Congés et fermetures.
  * ------------------------------------------------------------------ */
 console.log('\n─── Congés et fermetures ───────────────────────────')
