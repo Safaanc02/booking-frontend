@@ -10,8 +10,23 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
-        <Link to="/" className="text-lg font-bold tracking-tight text-stone-900">
-          Booking<span className="text-brand-600">.ma</span>
+        {/*
+          Le symbole et le mot, pas seulement le mot.
+          Le symbole seul serait illisible pour qui découvre la marque ; le mot
+          seul perdrait ce qui la rend reconnaissable en petit. Le symbole est
+          décoratif pour un lecteur d'écran — le nom est écrit juste à côté, et
+          l'annoncer deux fois n'apprend rien.
+        */}
+        <Link to="/" className="flex items-center gap-2.5">
+          <img
+            src="/logo-darzin.png"
+            alt=""
+            aria-hidden
+            width="32"
+            height="32"
+            className="h-8 w-8 shrink-0"
+          />
+          <span className="text-lg font-bold tracking-tight text-brand-700">darzin</span>
         </Link>
 
         <nav className="flex items-center gap-5">

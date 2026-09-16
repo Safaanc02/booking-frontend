@@ -93,13 +93,20 @@ export default function SalonCard({ salon, villeFiltree = false, metierFiltre = 
           {metiers.slice(0, 2).map((m) => (
             <span
               key={m}
-              className="rounded-full bg-black/25 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-white backdrop-blur-sm"
+              /* 55 % et non 25 %.
+                 Ces pastilles se posent sur un fond qu'on ne choisit pas : un
+                 dégradé pastel, ou la photo du salon. Sur la plus pâle des dix
+                 variantes de bandeau, le blanc à 25 % ne donnait que 2,49:1 —
+                 illisible. À 55 % il monte à 6,05:1 dans ce pire cas, et reste
+                 à 16:1 sur les fonds sombres, où la pastille se voit toujours
+                 aussi bien. */
+              className="rounded-full bg-black/55 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-white backdrop-blur-sm"
             >
               {libelleMetier(m)}
             </span>
           ))}
           {metiers.length > 2 && (
-            <span className="rounded-full bg-black/25 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
+            <span className="rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
               +{metiers.length - 2}
             </span>
           )}

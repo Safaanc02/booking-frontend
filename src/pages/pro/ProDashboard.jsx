@@ -51,7 +51,7 @@ export default function ProDashboard() {
             <Link to="/mon-planning" className="text-brand-700 underline">Mon planning</Link>.
           </p>
           <a
-            href="mailto:contact@booking.ma"
+            href="mailto:contact@darzin.ma"
             className="mt-5 inline-block rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
           >
             Contacter l'équipe

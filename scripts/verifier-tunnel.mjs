@@ -236,7 +236,7 @@ await attendreCreneaux()
 /**
  * On choisit un jour éloigné, pas le premier disponible.
  *
- * Les salons exigent un préavis d'annulation (12 h chez Dar Zine). Réserver
+ * Les salons exigent un préavis d'annulation (12 h chez Riad Nour). Réserver
  * le premier créneau libre — souvent quelques heures plus tard — rendait la
  * réservation non annulable, et le serveur répondait 409 à juste titre. Le
  * test doit se placer dans le cas qu'il prétend vérifier.

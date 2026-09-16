@@ -40,12 +40,33 @@ const empreinte = (texte) => {
  * l'esthétique, cuivre pour le hammam. Deux variantes par métier évitent que
  * deux salons de la même liste se ressemblent.
  */
+/*
+ * Une famille de couleurs par métier, tirée des cinq de la marque.
+ *
+ * Chaque bandeau est un dégradé du sombre vers le clair : la version sombre
+ * porte le texte blanc des pastilles posées dessus, la claire donne la
+ * lumière. Les cinq teintes de la palette ne pouvaient pas jouer les deux
+ * rôles — sur blanc, quatre d'entre elles plafonnent sous 2,4:1 —, chacune a
+ * donc sa nuance foncée dérivée de la même teinte.
+ *
+ * Les cinq métiers sont écartés en teinte autant qu'en clarté : un bandeau
+ * doit se reconnaître sans lire l'étiquette. La première version donnait au
+ * barbier et à l'onglerie deux roses voisins, et les deux cartes devenaient
+ * indiscernables côte à côte dans une page de résultats — ce qui ôtait à ces
+ * couleurs leur seule raison d'être.
+ *
+ * Terracotta pour la coiffure, qui est la couleur de la marque et le métier
+ * le plus courant ; vert sombre pour le barbier, seul registre neutre de la
+ * palette et qui va au métier ; rose pour l'onglerie ; menthe pour
+ * l'esthétique ; pêche pour le hammam. Deux variantes chacune, pour que deux
+ * salons voisins du même métier ne se ressemblent pas trait pour trait.
+ */
 const PALETTES = {
-  COIFFURE: [["#8b3244", "#c2566a"], ["#6f2837", "#a83f54"]],
-  BARBIER: [["#1c1917", "#44403c"], ["#292524", "#57534e"]],
-  ONGLERIE: [["#9d3f5e", "#d98693"], ["#7d2d4a", "#c2566a"]],
-  ESTHETIQUE: [["#326358", "#6fa79a"], ["#3f7d70", "#8fbfb4"]],
-  SPA: [["#8a4b2a", "#c08552"], ["#6d3a20", "#a86f43"]],
+  COIFFURE: [["#5d2f19", "#ac6039"], ["#774228", "#bb7958"]],
+  ONGLERIE: [["#8d3f46", "#bb8186"], ["#9f565c", "#c5a5a7"]],
+  SPA: [["#dd8a40", "#eac5a4"], ["#dc9f6a", "#f0ddcc"]],
+  BARBIER: [["#293d31", "#5e7869"], ["#3f5046", "#788c80"]],
+  ESTHETIQUE: [["#52986a", "#9bbfa7"], ["#70a481", "#bccdc2"]],
 }
 
 /** Décalages du motif, pour que deux salons ne le placent pas au même endroit. */

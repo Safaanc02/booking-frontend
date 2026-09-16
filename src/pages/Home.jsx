@@ -515,11 +515,11 @@ export default function Home() {
       {/* étiquettes de filtre.                                             */}
       {/* ---------------------------------------------------------------- */}
       {reseau.villes.length > 0 && (
-        <section className="relative isolate overflow-hidden border-y border-majorelle-200/60 bg-majorelle-50">
+        <section className="relative isolate overflow-hidden border-y border-sauge-200/60 bg-sauge-50">
           <TrameZellige
             id="trame-villes"
             taille={120}
-            className="pointer-events-none absolute inset-0 h-full w-full text-majorelle-600/[0.09]"
+            className="pointer-events-none absolute inset-0 h-full w-full text-sauge-600/[0.10]"
           />
           <div className="relative mx-auto max-w-6xl px-4 py-14">
             <TitreSection
@@ -533,11 +533,11 @@ export default function Home() {
                     to={`/recherche?ville=${encodeURIComponent(ville)}`}
                     className="group inline-flex items-baseline gap-2"
                   >
-                    <span className="font-titre text-2xl font-semibold text-stone-900 decoration-majorelle-500 decoration-2 underline-offset-[6px] transition group-hover:text-majorelle-700 group-hover:underline sm:text-3xl">
+                    <span className="font-titre text-2xl font-semibold text-stone-900 decoration-sauge-600 decoration-2 underline-offset-[6px] transition group-hover:text-sauge-800 group-hover:underline sm:text-3xl">
                       {ville}
                     </span>
                     {reseau.complet && (
-                      <span className="text-sm tabular-nums text-stone-400 transition group-hover:text-majorelle-600">
+                      <span className="text-sm tabular-nums text-stone-400 transition group-hover:text-sauge-700">
                         {parVille(ville)}
                       </span>
                     )}
@@ -573,7 +573,7 @@ export default function Home() {
       {/* traits nus sur du blanc ne retenaient pas l'œil, et la forme      */}
       {/* rappelle la colonnade des métiers plus haut.                      */}
       {/* ---------------------------------------------------------------- */}
-      <section className="border-y border-safran-100 bg-safran-50">
+      <section className="border-y border-menthe-200 bg-menthe-50">
         <div className="mx-auto max-w-6xl px-4 py-14">
           <div className="grid gap-8 sm:grid-cols-3 sm:gap-10">
             {PROMESSES.map(({ glyphe, titre, texte }) => {

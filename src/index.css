@@ -54,56 +54,86 @@
 }
 
 @theme {
-  /* ---- Marque ----
-     Bordeaux profond, emprunté aux tapis et aux babouches plutôt qu'aux
-     roses des applications de beauté. Les deux extrémités sont ajoutées :
-     la 800 pour les fonds pleins, la 300 pour les surfaces teintées. */
-  --color-brand-50:  #fdf3f4;
-  --color-brand-100: #fbe8ea;
-  --color-brand-200: #f6d0d6;
-  --color-brand-300: #eeaab5;
-  --color-brand-400: #d98693;
-  --color-brand-500: #c2566a;
-  --color-brand-600: #a83f54;
-  --color-brand-700: #8b3244;
-  --color-brand-800: #6f2837;
-  --color-brand-900: #4d1c27;
+  /* ---- Marque : le terracotta du logo ----
+     Relevé sur le logo lui-même (#a05030), et non approché à l'œil : c'est la
+     couleur du mot-symbole, celle qu'on verra dans l'en-tête à côté de chaque
+     bouton. Deux bruns voisins mais différents côte à côte se lisent comme
+     une erreur d'impression.
 
-  /* ---- Bleu Majorelle ----
-     Le bleu du jardin de Marrakech et des ruelles de Chefchaouen. Il porte
-     la section des villes : le bordeaux seul rendait chaque bande de la page
-     interchangeable, et un lieu se signale mieux par sa propre couleur. */
-  --color-majorelle-50:  #eef2fb;
-  --color-majorelle-100: #dce4f7;
-  --color-majorelle-200: #b9c8ef;
-  --color-majorelle-500: #3f5cc4;
-  --color-majorelle-600: #2f47a8;
-  --color-majorelle-700: #26397f;
+     L'échelle est dérivée de cette teinte, avec une saturation qui décroît
+     vers les extrêmes : une nuance très claire aussi saturée que sa base vire
+     au fluo, une très sombre à la boue.
 
-  /* ---- Safran ----
-     L'ocre des murs de Marrakech et de l'épice. Porte les bénéfices client,
-     là où le bordeaux de la marque n'a rien à dire de particulier. */
-  --color-safran-50:  #fdf6ec;
-  --color-safran-100: #faeacf;
-  --color-safran-500: #d99a2b;
-  --color-safran-600: #b87d1c;
-  --color-safran-700: #8f6015;
+     Contraste sur blanc : 600 → 5,67:1 (boutons, liens), 700 → 7,74:1 (AAA). */
+  --color-brand-50:  #f9f5f3;
+  --color-brand-100: #f3e9e5;
+  --color-brand-200: #ead3ca;
+  --color-brand-300: #dfb5a4;
+  --color-brand-400: #d48e73;
+  --color-brand-500: #c86b47;
+  --color-brand-600: #a15030;
+  --color-brand-700: #7f4229;
+  --color-brand-800: #603422;
+  --color-brand-900: #42251a;
 
-  /* ---- Second accent ----
-     Un vert-de-gris de zellige, pour les états positifs et les catégories.
-     Le bordeaux seul rendait chaque écran monochrome. */
-  --color-jade-50:  #f0f7f5;
-  --color-jade-100: #dbece7;
-  --color-jade-400: #6fa79a;
-  --color-jade-600: #3f7d70;
-  --color-jade-700: #326358;
+  /* ---- Les cinq couleurs de la palette ----
+     Quatre d'entre elles ne peuvent porter aucun texte : sur blanc, la sauge
+     plafonne à 2,39:1, la menthe à 1,60:1, la pêche à 1,87:1, le rose à
+     2,23:1. Il leur faut donc chacune une nuance sombre, dérivée de la même
+     teinte, pour écrire dessus ou à côté. La valeur donnée reste le 400 —
+     celle qu'on voit, celle des surfaces. */
+
+  /* Sauge — le cadre du calendrier dans le logo. */
+  --color-sauge-50:  #f2f5f3;
+  --color-sauge-100: #e4eae6;
+  --color-sauge-200: #cbd6ce;
+  --color-sauge-400: #9eaba2;
+  --color-sauge-600: #6b7d72;
+  --color-sauge-700: #55655c;
+  --color-sauge-800: #3f4c44;
+
+  /* Menthe — la plus claire des cinq. Surfaces et états positifs. */
+  --color-menthe-50:  #f4f9f6;
+  --color-menthe-100: #e6f1ea;
+  --color-menthe-200: #bdd1c5;
+  --color-menthe-400: #9dbaa6;
+  --color-menthe-600: #5c8069;
+  --color-menthe-700: #486754;
+
+  /* Pêche — les cases du calendrier. */
+  --color-peche-50:  #fdf6f1;
+  --color-peche-100: #faeade;
+  --color-peche-200: #f4d5c1;
+  --color-peche-400: #e8b298;
+  --color-peche-600: #c07a52;
+  --color-peche-700: #9a6040;
+
+  /* Rose poudré. */
+  --color-rose-50:  #fbf5f4;
+  --color-rose-100: #f6e8e6;
+  --color-rose-200: #ecd2cf;
+  --color-rose-400: #d3a29d;
+  --color-rose-600: #a86d67;
+  --color-rose-700: #875650;
+
+  /* Terre — la seule des cinq qui porte du texte (4,65:1). */
+  --color-terre-100: #f2e5e4;
+  --color-terre-400: #c08b89;
+  --color-terre-600: #a36361;
+  --color-terre-700: #834f4d;
 
   /* ---- Fonds ----
-     Ivoire tiède et non gris : le stone-50 de Tailwind tire vers le froid,
-     et c'est ce qui donnait cet air de gabarit non fini. La valeur est celle
-     du thème de connexion Keycloak, pour que les deux ne se contredisent pas. */
-  --color-ivoire: #faf9f7;
-  --color-sable:  #f4f1ec;
+     Un ivoire à peine teinté de la marque plutôt qu'un gris : le stone-50 de
+     Tailwind tire vers le froid, et c'est ce qui donnait cet air de gabarit
+     non fini. Le crème reste discret — une longue liste de résultats sur un
+     fond saturé fatigue avant la fin de la page. */
+  --color-ivoire: #faf8f6;
+  --color-sable:  #f4efe9;
+
+  /* ---- Texte ----
+     Un presque-noir tiède, tiré de la teinte de la marque et non du gris :
+     16:1 sur blanc, et il s'accorde aux bruns sans les salir. */
+  --color-encre: #30201a;
 
   /* ---- Typographie ----
      Deux familles, deux rôles. Fraunces porte les titres : ses formes douces
@@ -113,16 +143,16 @@
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-titre: "Fraunces Variable", "Fraunces", Georgia, serif;
 
-  /* Ombres portées teintées de bordeaux plutôt que de noir : une ombre noire
-     sur un fond ivoire se voit comme une salissure. */
-  --shadow-carte: 0 1px 2px 0 rgb(109 40 55 / 0.04), 0 4px 16px -4px rgb(109 40 55 / 0.08);
-  --shadow-carte-levee: 0 2px 4px 0 rgb(109 40 55 / 0.06), 0 12px 32px -8px rgb(109 40 55 / 0.14);
+  /* Ombres teintées de la marque plutôt que de noir : une ombre noire sur un
+     fond ivoire se voit comme une salissure. */
+  --shadow-carte: 0 1px 2px 0 rgb(96 52 34 / 0.05), 0 4px 16px -4px rgb(96 52 34 / 0.09);
+  --shadow-carte-levee: 0 2px 4px 0 rgb(96 52 34 / 0.07), 0 12px 32px -8px rgb(96 52 34 / 0.15);
 }
 
 html { -webkit-text-size-adjust: 100%; }
 
 body {
-  @apply bg-ivoire text-stone-900 antialiased;
+  @apply bg-ivoire text-encre antialiased;
 }
 
 /*

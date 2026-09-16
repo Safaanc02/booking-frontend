@@ -140,14 +140,14 @@ console.log('─── Le contrat de l\'API ────────────
   /*
    * Le repli sur le centre du quartier.
    *
-   * Dar Zine n'a jamais eu de coordonnées relevées : il doit se trouver au
+   * Riad Nour n'a jamais eu de coordonnées relevées : il doit se trouver au
    * centre du Guéliz. C'est ce repli qui décide si un salon référencé sans
    * relevé apparaît ou disparaît d'une recherche par proximité — et une
    * disparition ne se remarque pas, ni pour le client ni pour le gérant.
    */
   const guelizLat = 31.6383, guelizLng = -8.0110
   const auGueliz = await lire(`${API}/api/public/salons?lat=${guelizLat}&lng=${guelizLng}&rayon=2`)
-  const darZine = (auGueliz.corps?.content ?? []).find((s) => s.nom === 'Dar Zine')
+  const darZine = (auGueliz.corps?.content ?? []).find((s) => s.nom === 'Riad Nour')
   dire(Boolean(darZine), 'un salon sans relevé est tout de même situé')
   dire(darZine && darZine.distanceKm < 0.2,
     `il est placé au centre de son quartier (${darZine?.distanceKm?.toFixed(2)} km du Guéliz)`)
@@ -225,7 +225,7 @@ console.log('─── Depuis Casablanca ─────────────
   // Les deux salons de Casablanca, et aucun de Rabat ni de Marrakech.
   dire(contient(texte, 'Nails & Co') || contient(texte, 'Atlas Barber'),
     'les salons casablancais remontent')
-  dire(!contient(texte, 'Dar Zine'), 'Marrakech, à 220 km, ne remonte pas')
+  dire(!contient(texte, 'Riad Nour'), 'Marrakech, à 220 km, ne remonte pas')
 
   const distances = await page.evaluate(() =>
     [...document.querySelectorAll('a[href^="/salon/"]')].map((c) => {
@@ -250,7 +250,7 @@ console.log('─── Depuis Casablanca ─────────────
   await pause(1800)
   dire(!page.url().includes('lat='), 'la sortie retire la position de l\'adresse')
   const apres = await page.evaluate(() => document.body.innerText)
-  dire(contient(apres, 'Dar Zine') || contient(apres, 'Hammam'),
+  dire(contient(apres, 'Riad Nour') || contient(apres, 'Hammam'),
     'tout le réseau revient une fois la position oubliée')
 
   await page.close()
@@ -270,7 +270,7 @@ console.log('─── Depuis Marrakech ─────────────�
   await pause(2200)
 
   const texte = await page.evaluate(() => document.body.innerText)
-  dire(contient(texte, 'Dar Zine'), 'le salon de Marrakech remonte')
+  dire(contient(texte, 'Riad Nour'), 'le salon de Marrakech remonte')
   dire(!contient(texte, 'Atlas Barber'), 'Casablanca ne remonte plus')
   await page.close()
 }

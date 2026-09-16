@@ -347,7 +347,7 @@ const carteVedette = (q) => q.evaluate(() => {
   const largeur = await carteVedette(q)
   dire(largeur > 300, `la colonne tient sa place pendant le chargement (${largeur} px)`)
   const pendant = await q.evaluate(() => document.body.innerText)
-  dire(contient(pendant, 'Dar Zine') || /[A-Z]/.test(pendant),
+  dire(contient(pendant, 'Riad Nour') || /[A-Z]/.test(pendant),
     'le salon est déjà nommé pendant l\'attente')
   await pause(4200)
   dire(contient(await q.evaluate(() => document.body.innerText), 'libre en ce moment'),
