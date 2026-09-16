@@ -78,3 +78,4 @@ export function couleursSalon(salon) {
   const [sombre, clair] = variantes[h % variantes.length]
   return { sombre, clair, ancrage: ANCRAGES[(h >> 3) % ANCRAGES.length] }
 }
+

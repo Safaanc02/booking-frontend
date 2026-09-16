@@ -4,7 +4,7 @@ import { publicApi } from "../api/bookingApi"
 import SearchBar from "../components/SearchBar"
 import SalonCard from "../components/SalonCard"
 import { NoteResume } from "../components/Etoiles"
-import { TrameZellige, EtoileHuit } from "../components/Motifs"
+import { Arcature, MarqueArche } from "../components/Motifs"
 import Arche from "../components/Arche"
 import {
   Coiffure, Barbier, Onglerie, Esthetique, Hammam,
@@ -49,13 +49,7 @@ const GLYPHES = {
  * tuile bordeaux « Coiffure » retrouve des cartes bordeaux dans les
  * résultats. La cohérence n'est pas décorative, elle confirme le geste.
  */
-const DEGRADES = {
-  COIFFURE: "linear-gradient(150deg, #6f2837, #c2566a)",
-  BARBIER: "linear-gradient(150deg, #1c1917, #57534e)",
-  ONGLERIE: "linear-gradient(150deg, #7d2d4a, #d98693)",
-  ESTHETIQUE: "linear-gradient(150deg, #326358, #6fa79a)",
-  SPA: "linear-gradient(150deg, #6d3a20, #c08552)",
-}
+
 
 /** Ce que la réservation en ligne change, du point de vue du client. */
 const PROMESSES = [
@@ -125,7 +119,7 @@ function TitreSection({ titre, complement, lien, libelleLien }) {
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <h2 className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-stone-900">
-          <EtoileHuit className="h-3 w-3 shrink-0 text-brand-500" />
+          <MarqueArche className="h-3 w-3 shrink-0 text-brand-500" />
           {titre}
         </h2>
         {complement && <p className="mt-1 text-sm text-stone-500">{complement}</p>}
@@ -403,8 +397,8 @@ export default function Home() {
         {/* Le motif habille les marges hautes et s'efface avant d'atteindre le
             titre : une trame sous un texte de cette taille se lit comme du
             bruit, et c'est le titre qui doit gagner. */}
-        <TrameZellige
-          id="trame-accueil"
+        <Arcature
+          id="arcature-accueil"
           className="pointer-events-none absolute inset-0 h-full w-full text-brand-500/30"
           style={{
             maskImage: "radial-gradient(90% 55% at 50% -10%, #000 0%, transparent 75%)",
@@ -491,8 +485,8 @@ export default function Home() {
               >
                 {/* Le motif n'apparaît qu'au survol : la grille reste calme au
                     repos, et le geste est récompensé. */}
-                <TrameZellige
-                  id={`trame-${cle}`}
+                <Arcature
+                  id={`arcature-${cle}`}
                   taille={92}
                   className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 text-brand-400 opacity-0 transition-opacity duration-300 group-hover:opacity-60"
                 />
@@ -516,8 +510,8 @@ export default function Home() {
       {/* ---------------------------------------------------------------- */}
       {reseau.villes.length > 0 && (
         <section className="relative isolate overflow-hidden border-y border-sauge-200/60 bg-sauge-50">
-          <TrameZellige
-            id="trame-villes"
+          <Arcature
+            id="arcature-villes"
             taille={120}
             className="pointer-events-none absolute inset-0 h-full w-full text-sauge-600/[0.10]"
           />
@@ -583,7 +577,7 @@ export default function Home() {
                   <div className="relative isolate h-14 w-11">
                     <Arche
                       className="absolute inset-0"
-                      style={{ background: "linear-gradient(150deg, #8f6015, #d99a2b)" }}
+                      style={{ background: "linear-gradient(150deg, #7f4229, #c86b47)" }}
                     />
                     <Glyphe className="absolute left-1/2 top-[42%] h-5 w-5 -translate-x-1/2 -translate-y-1/2 text-white" />
                   </div>
@@ -601,8 +595,8 @@ export default function Home() {
       {/* ---------------------------------------------------------------- */}
       <section className="px-4 pb-16">
         <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-brand-700 px-8 py-12 sm:px-12">
-          <TrameZellige
-            id="trame-pro"
+          <Arcature
+            id="arcature-pro"
             taille={132}
             className="pointer-events-none absolute inset-0 h-full w-full text-white/25"
             style={{

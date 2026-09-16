@@ -263,7 +263,7 @@ if (!dire(mail !== null, `un e-mail est arrivé à ${GERANT}`)) {
 }
 
 const corps = `${mail.HTML ?? ''}\n${mail.Text ?? ''}`
-dire(/[à§é]|Booking/i.test(mail.Subject), `objet en français : « ${mail.Subject} »`)
+dire(/[à§é]|darzin/i.test(mail.Subject), `objet en français : « ${mail.Subject} »`)
 dire(!/mot de passe\s*(provisoire|temporaire)?\s*[:=]\s*\S+/i.test(mail.Text ?? ''),
   'l\'e-mail ne contient aucun mot de passe en clair')
 
@@ -305,7 +305,7 @@ if (!dire(await gerant.$('#password-new') === null && /continuer/i.test(intermed
 }
 dire(contient(intermediaire, 'mot de passe'),
   'cette page dit ce qui est demandé : choisir un mot de passe')
-dire(contient(intermediaire, 'Booking'), 'elle porte la marque, pas celle de l\'outil')
+dire(contient(intermediaire, 'darzin'), 'elle porte la marque, pas celle de l\'outil')
 await Promise.all([
   gerant.waitForNavigation({ waitUntil: 'networkidle0', timeout: 25000 }).catch(() => {}),
   gerant.evaluate(() => [...document.querySelectorAll('a')]
