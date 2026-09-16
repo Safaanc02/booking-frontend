@@ -1,62 +1,106 @@
 /**
- * Motifs géométriques du site.
+ * Motifs du site.
  *
  * Dessinés en SVG et non importés comme images : rien à télécharger, aucune
- * pixellisation à l'agrandissement, et la couleur suit celle du texte — un
- * même motif sert donc sur fond clair comme sur fond terracotta.
+ * pixellisation à l'agrandissement, et la couleur peut suivre celle du texte —
+ * un même motif sert donc sur fond clair comme sur fond terracotta.
  *
- * La figure de base est l'arche outrepassée, celle des riads et des hammams.
- * Elle a remplacé la trame d'étoiles de zellige, qui ne fonctionnait pas : ces
- * étoiles étaient *posées* sur un fond, alors que le vrai zellige est une
- * tessellation — les formes s'emboîtent bord à bord, sans fond visible entre
- * elles. D'où cet air de papier peint piquant, qui se remarquait d'autant plus
- * derrière du texte.
+ * Deux essais ont précédé celui-ci, et ce qu'ils ont appris tient en une
+ * phrase : un motif de fond ne doit pas avoir l'air d'un papier peint.
  *
- * L'arche règle cela autrement : elle est marocaine par l'architecture plutôt
- * que par le carrelage, ce qui est moins attendu, et une arcature répétée est
- * calme par nature — des courbes parallèles, aucune pointe.
+ * La trame d'étoiles de zellige échouait pour une raison de fond — ces étoiles
+ * étaient *posées* sur un fond, alors que le vrai zellige est une
+ * tessellation, où les formes s'emboîtent sans fond visible entre elles. D'où
+ * un rendu piquant, d'autant plus gênant derrière du texte. L'arcature qui l'a
+ * remplacée était calme, mais froide : une rangée de portes.
+ *
+ * Le registre est donc désormais floral et solaire. Deux objets, deux rôles
+ * distincts : une rosace rayonnante comme geste unique dans un grand bandeau,
+ * et un semis de fleurs comme texture répétable partout ailleurs. Une grande
+ * rosace ne se répète pas ; un semis ne fait pas un geste.
  */
 
 /**
- * Arcature : des arches outrepassées, répétées.
+ * Pétales arrondis disposés en couronne.
  *
- * Deux arches emboîtées par tuile, l'une dans l'autre : une seule donnerait
- * une rangée de tunnels, deux donnent l'épaisseur d'un mur et un rythme
- * intérieur. Les pieds descendent sous la tuile, si bien que le motif se
- * raccorde sans couture quand le navigateur le répète.
- *
- * `taille` fixe la largeur d'une arche ; la hauteur en découle, dans la
- * proportion d'une arche outrepassée — plus haute que large, comme dans les
- * bâtiments dont elle vient.
+ * `n` pétales, chacun une goutte engendrée par deux courbes symétriques puis
+ * tournée. Arrondi et non pointu : c'est toute la différence avec l'étoile de
+ * zellige — une pointe est géométrique, un pétale est vivant.
  */
-export function Arcature({ id, taille = 96, className = "", style }) {
-  const l = taille
-  const h = Math.round(l * 1.25)
-  // Proportions exprimées en fraction de la tuile : le dessin reste le même à
-  // n'importe quelle échelle, seule la densité change.
-  const m = l * 0.083          // marge latérale de l'arche extérieure
-  const ep = l * 0.167         // épaisseur du mur, entre les deux arches
-  const epaule = h * 0.483     // hauteur des épaules, où la courbe commence
-  const sommet = h * 0.050     // hauteur du sommet
+const petales = (n, rayon, largeur, cle = "p") =>
+  Array.from({ length: n }, (_, i) => (
+    <path
+      key={`${cle}${i}`}
+      transform={`rotate(${(360 * i) / n})`}
+      d={`M0 0 C ${largeur} ${-rayon * 0.42} ${largeur} ${-rayon * 0.72} 0 ${-rayon}`
+        + ` C ${-largeur} ${-rayon * 0.72} ${-largeur} ${-rayon * 0.42} 0 0 Z`}
+    />
+  ))
 
-  const arche = (x0, x1, yEpaule, ySommet) => {
-    const cx = (x0 + x1) / 2
-    // Le dépassement horizontal fait le fer à cheval : sans lui, l'arche est
-    // un simple plein cintre, et c'est ce détail qui la situe au Maroc.
-    const debord = (x1 - x0) * 0.09
-    return `M${x0} ${h} L${x0} ${yEpaule}`
-      + ` C${x0 - debord} ${yEpaule * 0.42} ${cx - (cx - x0) * 0.62} ${ySommet} ${cx} ${ySommet}`
-      + ` C${cx + (x1 - cx) * 0.62} ${ySommet} ${x1 + debord} ${yEpaule * 0.42} ${x1} ${yEpaule}`
-      + ` L${x1} ${h}`
-  }
+/**
+ * La rosace-soleil : un geste, pas une trame.
+ *
+ * Deux couronnes de pétales et un cœur. La couronne extérieure, à seize
+ * pétales fins, fait le rayonnement ; l'intérieure, à huit pétales larges,
+ * fait la fleur. C'est la même figure lue de deux façons, et c'est ce qui la
+ * rend solaire sans être un soleil dessiné.
+ *
+ * Positionnée par l'appelant, jamais répétée : elle vaut par sa taille et par
+ * le fait qu'il n'y en a qu'une.
+ */
+export function RosaceSoleil({ className = "", style, taille = 340 }) {
+  const r = taille / 2
+  return (
+    <svg
+      aria-hidden
+      viewBox="-200 -200 400 400"
+      className={className}
+      style={{ width: taille, height: taille, ...style }}
+    >
+      <g fill="var(--rosace-rayons, #eec3a8)" opacity="0.62">{petales(16, 190, 30, "r")}</g>
+      <g fill="var(--rosace-petales, #d3a29d)" opacity="0.52">{petales(8, 112, 35, "f")}</g>
+      <circle r={r * 0.10} fill="var(--rosace-coeur, #e8b298)" opacity="0.78" />
+    </svg>
+  )
+}
+
+/**
+ * Semis de fleurs : la texture répétable.
+ *
+ * Quatre fleurs par tuile, à des tailles, des angles et des couleurs
+ * différents. L'irrégularité est le point : quatre fleurs identiques alignées
+ * redonneraient un papier peint, et c'est précisément ce qu'on cherche à
+ * éviter. Aucune ne touche le bord au même endroit, si bien que la répétition
+ * ne se lit pas.
+ *
+ * `couleurs` nulle : tout est dessiné dans la couleur du texte, avec des
+ * opacités différentes. C'est ce qui permet au même semis de vivre sur le
+ * bandeau terracotta en blanc, et sur un fond clair en rose.
+ */
+export function SemisFleurs({ id, taille = 190, className = "", style, couleurs = null }) {
+  const l = taille
+  const h = Math.round(l * 0.79)
+  const c = couleurs ?? []
+  const teinte = (i, opaciteParDefaut) =>
+    couleurs
+      ? { fill: c[i % c.length], opacity: 0.46 }
+      : { fill: "currentColor", opacity: opaciteParDefaut }
 
   return (
     <svg aria-hidden className={className} style={style}>
       <defs>
         <pattern id={id} width={l} height={h} patternUnits="userSpaceOnUse">
-          <g fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
-            <path d={arche(m, l - m, epaule, sommet)} />
-            <path d={arche(m + ep, l - m - ep, epaule + h * 0.09, sommet + h * 0.17)} />
+          <g transform={`translate(${l * 0.16} ${h * 0.24})`} {...teinte(0, 0.42)}>
+            {petales(5, 17, 8, "a")}
+          </g>
+          <g transform={`translate(${l * 0.74} ${h * 0.69}) rotate(25)`} {...teinte(1, 0.50)}>
+            {petales(5, 19, 9, "b")}
+          </g>
+          <g transform={`translate(${l * 0.50} ${h * 0.12}) rotate(-18) scale(0.62)`} {...teinte(2, 0.45)}>
+            {petales(5, 17, 8, "c")}
+          </g>
+          <g transform={`translate(${l * 0.93} ${h * 0.13}) scale(0.5)`} {...teinte(0, 0.34)}>
+            {petales(5, 17, 8, "d")}
           </g>
         </pattern>
       </defs>
@@ -66,39 +110,30 @@ export function Arcature({ id, taille = 96, className = "", style }) {
 }
 
 /**
- * L'arche seule, comme marque.
+ * La fleur seule, comme marque.
  *
  * Sert de ponctuation entre un titre et son complément, là où l'on aurait mis
- * un point médian sans caractère. Elle remplace l'étoile à huit branches qui
- * tenait ce rôle : garder une étoile après avoir retiré la trame d'étoiles
- * aurait laissé un vestige de l'identité précédente, visible surtout parce
- * qu'il ne renvoyait plus à rien.
- *
- * Pleine et non au trait : à douze pixels, un contour de 1 px se réduit à une
- * tache grise.
+ * un point médian sans caractère. Pleine et non au trait : à douze pixels, un
+ * contour de 1 px se réduit à une tache grise.
  */
-export function MarqueArche({ className = "" }) {
+export function MarqueFleur({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden className={className}>
-      <path
-        fill="currentColor"
-        d="M4 22 L4 11 C4 5.5 7.6 2 12 2 C16.4 2 20 5.5 20 11 L20 22 Z"
-      />
+    <svg viewBox="-24 -24 48 48" aria-hidden className={className}>
+      <g fill="currentColor">{petales(5, 20, 9, "m")}</g>
     </svg>
   )
 }
 
 /**
- * Bandeau d'arcature, en séparation de sections.
+ * Bandeau fleuri, en séparation de sections.
  *
  * Une frise de quelques pixels qui coupe la page franchement, au lieu du
- * filet gris habituel. C'est le motif employé comme ponctuation : il donne
- * un rythme là où les sections se succédaient sans transition.
+ * filet gris habituel.
  */
-export function FriseArcature({ id, className = "", hauteur = "h-6" }) {
+export function FriseFleurs({ id, className = "", hauteur = "h-6" }) {
   return (
     <div className={`relative overflow-hidden ${hauteur} ${className}`}>
-      <Arcature id={id} taille={38} className="absolute inset-0 h-full w-full" />
+      <SemisFleurs id={id} taille={74} className="absolute inset-0 h-full w-full" />
     </div>
   )
 }

@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom"
 import AuthProvider from "./auth/AuthProvider"
 import Header from "./components/Header"
-import { DefinitionArche } from "./components/Arche"
 import Home from "./pages/Home"
 import Results from "./pages/Results"
 import SalonDetails from "./pages/SalonDetails"
@@ -22,9 +21,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <div className="flex min-h-screen flex-col">
-          {/* Le tracé de l'arche, déclaré une fois pour toute l'application. */}
-          <DefinitionArche />
-          <Header />
+          {/* Le tracé de l'arche, déclaré une fois pour toute l'application. */}<Header />
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<Home />} />
