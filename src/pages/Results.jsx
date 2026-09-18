@@ -4,7 +4,7 @@ import { publicApi } from "../api/bookingApi"
 import SearchBar from "../components/SearchBar"
 import SalonCard from "../components/SalonCard"
 import { ErrorState } from "../components/Loader"
-import { MarqueFleur } from "../components/Motifs"
+import { Marque } from "../components/Motifs"
 import {
   Coiffure, Barbier, Onglerie, Esthetique, Hammam, Boussole,
 } from "../components/Glyphes"
@@ -139,7 +139,7 @@ export default function Results() {
           <>
             <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-3">
               <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-stone-900">
-                <MarqueFleur className="h-3 w-3 shrink-0 text-brand-500" />
+                <Marque className="h-3 w-3 shrink-0 text-brand-500" />
                 {total === 0
                   ? "Aucun salon"
                   : `${total} salon${total > 1 ? "s" : ""}`}
@@ -206,7 +206,7 @@ export default function Results() {
             {salons.length === 0 ? (
               <div className="mt-8 overflow-hidden rounded-3xl bg-white ring-1 ring-stone-200/70">
                 <div className="p-10 text-center">
-                  <MarqueFleur className="mx-auto h-7 w-7 text-brand-200" />
+                  <Marque className="mx-auto h-7 w-7 text-brand-200" />
                   <h2 className="mt-4 text-xl font-semibold text-stone-900">
                     {situee
                       ? `Aucun salon à moins de ${rayon} km`

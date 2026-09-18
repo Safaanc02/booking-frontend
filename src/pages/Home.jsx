@@ -4,7 +4,7 @@ import { publicApi } from "../api/bookingApi"
 import SearchBar from "../components/SearchBar"
 import SalonCard from "../components/SalonCard"
 import { NoteResume } from "../components/Etoiles"
-import { SemisFleurs, RosaceSoleil, MarqueFleur } from "../components/Motifs"
+import { Semis, Panneau, Marque } from "../components/Motifs"
 import {
   Coiffure, Barbier, Onglerie, Esthetique, Hammam,
   Horloge, Etiquette, Rappel,
@@ -103,7 +103,7 @@ function TitreSection({ titre, complement, lien, libelleLien }) {
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <h2 className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-stone-900">
-          <MarqueFleur className="h-3 w-3 shrink-0 text-brand-500" />
+          <Marque className="h-3 w-3 shrink-0 text-brand-500" />
           {titre}
         </h2>
         {complement && <p className="mt-1 text-sm text-stone-500">{complement}</p>}
@@ -400,37 +400,31 @@ function Vitrine() {
       {/* ---------------------------------------------------------------- */}
       <section className="relative overflow-hidden bg-gradient-to-b from-brand-50 via-brand-50/40 to-ivoire">
         {/*
-          Une rosace, et non une trame répétée.
+          Une semaine, et non une trame répétée.
 
           Un geste unique vaut mieux qu'un motif de fond sur un bandeau de
           cette taille : le motif se lit comme du bruit sous un titre, la
-          rosace se lit comme une signature. Elle est placée derrière la carte
+          semaine se lit comme une signature. Elle est placée derrière la carte
           de créneaux et déborde volontairement du bandeau — une forme coupée
           par le bord paraît plus grande que le cadre, et suggère qu'il y en a
           davantage hors champ.
 
+          Seule, désormais. Un semis occupait aussi la moitié gauche : depuis
+          que les deux dessinent la même grille, ils ne se répondaient plus,
+          ils se répétaient — et le haut du bandeau tournait au bruit. La
+          semaine se remplit de gauche à droite, encore faut-il la voir en
+          entier pour le comprendre.
+
           Masquée en bas pour s'éteindre avant le bas de section, et cachée
           sous lg : à la largeur d'un téléphone, la colonne de droite passe
-          sous le titre et la rosace se retrouverait derrière le texte.
+          sous le titre et la semaine se retrouverait derrière le texte.
         */}
-        <RosaceSoleil
-          taille={560}
-          className="pointer-events-none absolute -right-28 -top-36 hidden lg:block"
+        <Panneau
+          taille={520}
+          className="pointer-events-none absolute -right-16 -top-10 hidden lg:block"
           style={{
-            maskImage: "linear-gradient(to bottom, #000 45%, transparent 92%)",
-            WebkitMaskImage: "linear-gradient(to bottom, #000 45%, transparent 92%)",
-          }}
-        />
-
-        {/* Un semis très pâle sur la moitié gauche, pour que le bandeau ne
-            soit pas vide du côté du titre — sans jamais passer dessous. */}
-        <SemisFleurs
-          id="semis-accueil"
-          taille={210}
-          className="pointer-events-none absolute inset-0 h-full w-full text-brand-500/25"
-          style={{
-            maskImage: "radial-gradient(62% 48% at 16% 4%, #000 0%, transparent 78%)",
-            WebkitMaskImage: "radial-gradient(62% 48% at 16% 4%, #000 0%, transparent 78%)",
+            maskImage: "linear-gradient(to bottom, #000 52%, transparent 94%)",
+            WebkitMaskImage: "linear-gradient(to bottom, #000 52%, transparent 94%)",
           }}
         />
 
@@ -513,7 +507,7 @@ function Vitrine() {
               >
                 {/* Le motif n'apparaît qu'au survol : la grille reste calme au
                     repos, et le geste est récompensé. */}
-                <SemisFleurs
+                <Semis
                   id={`semis-${cle}`}
                   taille={92}
                   className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 text-brand-400 opacity-0 transition-opacity duration-300 group-hover:opacity-60"
@@ -538,7 +532,7 @@ function Vitrine() {
       {/* ---------------------------------------------------------------- */}
       {reseau.villes.length > 0 && (
         <section className="relative isolate overflow-hidden border-y border-sauge-200/60 bg-sauge-50">
-          <SemisFleurs
+          <Semis
             id="semis-villes"
             taille={120}
             className="pointer-events-none absolute inset-0 h-full w-full text-sauge-700/[0.14]"
@@ -622,7 +616,7 @@ function Vitrine() {
       {/* ---------------------------------------------------------------- */}
       <section className="px-4 pb-16">
         <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-brand-700 px-8 py-12 sm:px-12">
-          <SemisFleurs
+          <Semis
             id="semis-pro"
             taille={132}
             className="pointer-events-none absolute inset-0 h-full w-full text-white/25"

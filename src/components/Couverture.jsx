@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { couleursSalon } from "../lib/identiteSalon"
 import { urlApi } from "../lib/format"
-import { SemisFleurs } from "./Motifs"
+import { Semis } from "./Motifs"
 import { Coiffure, Barbier, Onglerie, Esthetique, Hammam } from "./Glyphes"
 
 /**
@@ -55,7 +55,7 @@ export default function Couverture({ salon, hauteur = "h-32", className = "", ch
         />
       ) : (
         <>
-          <SemisFleurs
+          <Semis
             id={id}
             taille={104}
             className="pointer-events-none absolute h-[190%] w-[190%] text-white/25"

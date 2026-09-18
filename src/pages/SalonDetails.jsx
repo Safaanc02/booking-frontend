@@ -5,7 +5,7 @@ import { prix, duree, telephone, urlApi } from "../lib/format"
 import Loader, { ErrorState } from "../components/Loader"
 import ListeAvis from "../components/ListeAvis"
 import Couverture, { Initiales } from "../components/Couverture"
-import { MarqueFleur } from "../components/Motifs"
+import { Marque } from "../components/Motifs"
 import { Horloge, Etiquette } from "../components/Glyphes"
 import { libelleMetier, metiersDuSalon } from "../lib/metiers"
 
@@ -163,7 +163,7 @@ export default function SalonDetails() {
             {employes.length > 0 && (
               <section className="mt-8">
                 <h2 className="flex items-center gap-2.5 text-xl font-bold text-stone-900">
-                  <MarqueFleur className="h-3 w-3 shrink-0 text-brand-500" />
+                  <Marque className="h-3 w-3 shrink-0 text-brand-500" />
                   L’équipe
                 </h2>
                 <div className="mt-4 flex flex-wrap gap-3">
@@ -187,7 +187,7 @@ export default function SalonDetails() {
 
             <section className="mt-10">
               <h2 className="flex items-center gap-2.5 text-xl font-bold text-stone-900">
-                <MarqueFleur className="h-3 w-3 shrink-0 text-brand-500" />
+                <Marque className="h-3 w-3 shrink-0 text-brand-500" />
                 Prestations
               </h2>
 
@@ -241,7 +241,7 @@ export default function SalonDetails() {
 
             <section className="mt-10">
               <h2 className="flex items-center gap-2.5 text-xl font-bold text-stone-900">
-                <MarqueFleur className="h-3 w-3 shrink-0 text-brand-500" />
+                <Marque className="h-3 w-3 shrink-0 text-brand-500" />
                 Avis clients
               </h2>
               <p className="mt-1 text-sm text-stone-500">
