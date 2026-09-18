@@ -15,6 +15,7 @@
  *   npm run verifier:referencement
  */
 import puppeteer from 'puppeteer-core'
+import { nettoyer } from './menage.mjs'
 
 const CHROME = process.env.CHROME_PATH
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
@@ -52,15 +53,22 @@ const ARGS_SUP = (process.env.CHROME_ARGS ?? '')
   .match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)?.map((a) => a.replace(/["']/g, '')) ?? []
 const ok = (c) => (c ? '✅' : '❌')
 
-/* Un identifiant par exécution : le script doit pouvoir tourner deux fois. */
-const SUFFIXE = Date.now().toString().slice(-6)
-const SALON = `Studio Yasmine ${SUFFIXE}`
+/*
+ * Des noms fixes, et lisibles.
+ *
+ * Ils portaient l'horodatage — « Studio Yasmine 558038 » — pour que la suite
+ * puisse tourner deux fois. Le contournement a fini par coûter plus cher que
+ * le problème : le catalogue public a accumulé quatre-vingt-treize salons de
+ * test pour six réels, et plus personne ne pouvait le montrer. La suite fait
+ * désormais le ménage avant et après, ce qui rend l'unicité inutile.
+ */
+const SALON = 'Studio Yasmine'
 /** Point relevé pour le salon référencé : Malabata, Tanger. */
 const POINT_RELEVE = { lat: 35.7912, lng: -5.7789 }
 /** Le repère d'Iberia, tel que la migration V13 l'enregistre. */
 const CENTRE_IBERIA = { lat: 35.7700, lng: -5.8100 }
-const GERANT = `yasmine.${SUFFIXE}@example.ma`
-const MOT_DE_PASSE = `Gerant!${SUFFIXE}`
+const GERANT = 'yasmine@example.ma'
+const MOT_DE_PASSE = 'Gerant!2026'
 
 let echecs = 0
 const dire = (condition, libelle) => {
@@ -70,6 +78,10 @@ const dire = (condition, libelle) => {
 }
 
 const pause = (ms) => new Promise((r) => setTimeout(r, ms))
+
+/* Le ménage d'abord : une exécution interrompue laisse son salon derrière
+   elle, et la suivante échouerait sur un nom déjà pris. */
+await nettoyer({ api: API, kc: KC, salons: [SALON], emails: [GERANT] })
 
 const browser = await puppeteer.launch({
   executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu', ...ARGS_SUP],
@@ -483,4 +495,12 @@ await navigateurGerant.close()
 await browser.close()
 console.log()
 console.log(echecs === 0 ? '✅ Parcours de référencement complet.' : `❌ ${echecs} assertion(s) en échec.`)
+
+/* Et le ménage ensuite : une suite doit rendre la base telle qu'elle l'a
+   trouvée. C'est faute de quoi le catalogue public a fini par compter plus de
+   salons de test que de salons réels. */
+console.log()
+console.log('─── Ménage ─────────────────────────────────────────')
+await nettoyer({ api: API, kc: KC, salons: [SALON], emails: [GERANT], bavard: true })
+
 process.exit(echecs === 0 ? 0 : 1)

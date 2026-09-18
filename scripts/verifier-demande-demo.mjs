@@ -12,6 +12,7 @@
  *   npm run verifier:demande-demo
  */
 import puppeteer from 'puppeteer-core'
+import { nettoyer } from './menage.mjs'
 
 const CHROME = process.env.CHROME_PATH
   ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
@@ -48,9 +49,21 @@ const ARGS_SUP = (process.env.CHROME_ARGS ?? '')
   .match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)?.map((a) => a.replace(/["']/g, '')) ?? []
 const ok = (c) => (c ? '✅' : '❌')
 
-const SUFFIXE = Date.now().toString().slice(-6)
-const SALON = `Institut Chaimae ${SUFFIXE}`
-const EMAIL = `chaimae.${SUFFIXE}@example.ma`
+/*
+ * Des noms fixes, et lisibles. Voir scripts/menage.mjs : ils portaient
+ * l'horodatage pour que la suite puisse tourner deux fois, et le catalogue
+ * public s'est rempli de salons que personne ne pouvait montrer.
+ */
+const SALON = 'Institut Chaimae'
+/*
+ * L'adresse, elle, reste unique à chaque exécution.
+ *
+ * Le serveur refuse qu'une même adresse redépose dans les vingt-quatre
+ * heures — un garde anti-robot qui vaut mieux que la commodité d'un test.
+ * Elle n'apparaît nulle part dans le catalogue, contrairement au nom du
+ * salon, et le ménage efface les comptes par préfixe.
+ */
+const EMAIL = `chaimae.${Date.now().toString().slice(-6)}@example.ma`
 
 let echecs = 0
 const dire = (condition, libelle) => {
@@ -72,6 +85,10 @@ const jeton = async (identifiant) => {
   if (!r.ok) throw new Error(`authentification ${identifiant} impossible (${r.status})`)
   return (await r.json()).access_token
 }
+
+/* Le ménage d'abord : une exécution interrompue laisse son salon derrière
+   elle, et la suivante échouerait sur un nom déjà pris. */
+await nettoyer({ api: API, kc: KC, salons: [SALON], emails: ['chaimae.*'] })
 
 const browser = await puppeteer.launch({
   executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu', ...ARGS_SUP],
@@ -435,4 +452,12 @@ erreurs.slice(0, 5).forEach((e) => console.log('     ', e.slice(0, 160)))
 await browser.close()
 console.log()
 console.log(echecs === 0 ? '✅ Parcours de prise de contact complet.' : `❌ ${echecs} assertion(s) en échec.`)
+
+/* Et le ménage ensuite : une suite doit rendre la base telle qu'elle l'a
+   trouvée. C'est faute de quoi le catalogue public a fini par compter plus de
+   salons de test que de salons réels. */
+console.log()
+console.log('─── Ménage ─────────────────────────────────────────')
+await nettoyer({ api: API, kc: KC, salons: [SALON], emails: ['chaimae.*'], bavard: true })
+
 process.exit(echecs === 0 ? 0 : 1)
