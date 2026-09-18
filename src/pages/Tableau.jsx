@@ -94,7 +94,11 @@ export default function Tableau() {
 
   useEffect(charger, [charger])
 
-  const { reservations = [], salons = [], journee = [], plateforme, demandes = [] } = etat.donnees
+  /* `demandes` est un nombre : le point d'entrée compte les demandes en
+     attente, il ne les liste pas. Le lire comme un tableau donnait
+     `undefined` à la place du compte, et la file commerciale — la chose la
+     plus urgente de l'écran — ne remontait jamais en tête. */
+  const { reservations = [], salons = [], journee = [], plateforme, demandes = 0 } = etat.donnees
 
   /* Les rendez-vous à venir de la personne connectée, du plus proche au plus loin. */
   const aVenir = useMemo(() => {
@@ -104,10 +108,20 @@ export default function Tableau() {
       .sort((a, b) => new Date(a.debut) - new Date(b.debut))
   }, [reservations])
 
-  /* Les visites honorées qui attendent encore un avis. */
-  const avisAttendus = useMemo(
-    () => reservations.filter((r) => r.statut === "HONOREE" && !r.avisDepose),
-    [reservations])
+  /*
+   * Les visites honorées qui attendent encore un avis.
+   *
+   * Passées, et pas seulement marquées honorées : la base garde des
+   * rendez-vous à venir que quelqu'un a marqués honorés d'avance — une suite
+   * de vérification, un geste de trop dans l'agenda. Demander son avis sur
+   * une visite qui n'a pas eu lieu se voit immédiatement, et jette un doute
+   * sur tout le reste de l'écran.
+   */
+  const avisAttendus = useMemo(() => {
+    const maintenant = Date.now()
+    return reservations.filter(
+      (r) => r.statut === "HONOREE" && !r.avisDepose && new Date(r.debut) < maintenant)
+  }, [reservations])
 
   /* La journée du gérant, ce qu'il en reste. */
   const journeeRestante = useMemo(() => {
@@ -461,10 +475,10 @@ function SectionPro({ journee, salons }) {
  */
 function fileAdmin(plateforme, demandes) {
   const file = []
-  if (demandes.length > 0) {
+  if (demandes > 0) {
     file.push({
       cle: "demandes",
-      libelle: `${demandes.length} demande${demandes.length > 1 ? "s" : ""} de démo à traiter`,
+      libelle: `${demandes} demande${demandes > 1 ? "s" : ""} de démo à traiter`,
       urgence: "Un salon vous a écrit et attend une réponse.",
     })
   }
