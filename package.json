@@ -16,7 +16,8 @@
     "verifier:demande-demo": "node scripts/verifier-demande-demo.mjs",
     "verifier:proximite": "node scripts/verifier-proximite.mjs",
     "verifier:inscription": "node scripts/verifier-inscription.mjs",
-    "verifier:tableau": "node scripts/verifier-tableau.mjs"
+    "verifier:tableau": "node scripts/verifier-tableau.mjs",
+    "semer:demo": "node scripts/semer-demo.mjs"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",
