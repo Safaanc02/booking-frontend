@@ -22,6 +22,16 @@
  *
  * Le script ajoute, il n'efface rien : le relancer empile une nouvelle
  * journée sur la précédente.
+ *
+ * Il vise le développement par défaut. Pour garnir la pile de partage :
+ *
+ *   API_URL=http://localhost:8090 KC_URL=http://localhost:8090/auth \
+ *   PG_CONTENEUR=booking-partage-postgres-1 ENV_FICHIER=../../booking-backend/partage.env \
+ *   npm run semer:demo
+ *
+ * `API_URL` est l'origine seule : les chemins portent déjà leur `/api`. L'y
+ * remettre donnait `/api/api/...`, que le serveur refusait en 401 — un code
+ * qui envoie chercher un problème d'authentification là où il n'y en a pas.
  */
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -31,6 +41,10 @@ const execFileP = promisify(execFile)
 
 const API = process.env.API_URL ?? 'http://localhost:8080'
 const KC = process.env.KC_URL ?? 'http://localhost:8081'
+/* Le conteneur Postgres visé. Le développement et la pile de partage ont
+   chacun le leur, et se tromper de base est silencieux : le script annonce
+   tout en vert sans que rien n'apparaisse à l'écran qu'on regarde. */
+const PG = process.env.PG_CONTENEUR ?? 'booking-postgres'
 const ZONE = 'Africa/Casablanca'
 
 const COMPTES = {
@@ -110,13 +124,23 @@ function instant(jours, heure, minute = 0) {
   return new Date(minuitUtc + (heure - decalage) * 3_600_000 + minute * 60_000).toISOString()
 }
 
-/** Une requête SQL sur la base locale, par le conteneur Postgres. */
+/**
+ * Une requête SQL sur la base visée, par son conteneur Postgres.
+ *
+ * Le mot de passe vient de l'environnement s'il y est, sinon du fichier de
+ * configuration du serveur — le même que celui dont se sert l'API, pour
+ * qu'il n'y ait pas deux endroits à tenir en accord.
+ */
 async function sql(requete) {
-  const env = readFileSync(new URL('../../booking-backend/.env', import.meta.url), 'utf8')
-  const motDePasse = env.match(/^DB_PASSWORD=(.*)$/m)?.[1]?.trim()
-  if (!motDePasse) throw new Error('DB_PASSWORD introuvable dans booking-backend/.env')
+  let motDePasse = process.env.DB_PASSWORD
+  if (!motDePasse) {
+    const chemin = process.env.ENV_FICHIER ?? '../../booking-backend/.env'
+    const env = readFileSync(new URL(chemin, import.meta.url), 'utf8')
+    motDePasse = env.match(/^DB_PASSWORD=(.*)$/m)?.[1]?.trim()
+  }
+  if (!motDePasse) throw new Error('DB_PASSWORD introuvable — le passer en variable d\'environnement')
   const { stdout } = await execFileP('docker', [
-    'exec', '-e', `PGPASSWORD=${motDePasse}`, 'booking-postgres',
+    'exec', '-e', `PGPASSWORD=${motDePasse}`, PG,
     'psql', '-U', 'booking_user', '-d', 'beauty_booking', '-tAc', requete,
   ])
   return stdout.trim()
@@ -156,17 +180,50 @@ async function reserverPourLaCliente(t, { salonId, prestationId, jours, apres },
   return null
 }
 
+/**
+ * Les salons en ligne, avec une prestation chacun.
+ *
+ * Découverts plutôt que codés en dur. Les identifiants ne sont pas les mêmes
+ * d'une base à l'autre : le script écrit pour le développement refusait tout
+ * sur la pile de partage — « cette prestation n'appartient pas à ce salon »,
+ * quatorze fois de suite — parce qu'il y demandait le salon 1 et la
+ * prestation 7, qui existent des deux côtés sans rien avoir en commun.
+ */
+async function salonsAvecPrestations(combien) {
+  const page = await appel('/api/public/salons?size=40')
+  const salons = (page.content ?? []).filter((s) => s.statut !== 'EN_ATTENTE')
+  const retenus = []
+  for (const salon of salons) {
+    if (retenus.length >= combien) break
+    /* Par la fiche publique, et non par `/api/prestations/salon/…` : ce
+       dernier est un point d'entrée professionnel, qui répond 401 à qui n'a
+       pas de jeton — et la cliente n'en a pas pour ce salon. */
+    const fiche = await appel(`/api/public/salons/${salon.id}`).catch(() => null)
+    const prestations = fiche?.prestations ?? []
+    if (prestations.length === 0) continue
+    retenus.push({ id: salon.id, nom: salon.nom, prestations: prestations.map((p) => p.id) })
+  }
+  return retenus
+}
+
 async function semerCliente(tClient, tAdmin) {
   console.log('\n─── La cliente ─────────────────────────────────────')
 
-  /* Trois salons différents, sur dix jours : le tableau de bord montre le
-     prochain en grand et les suivants en dessous, il faut donc plus d'un. */
-  const voulus = [
-    { salonId: 1, prestationId: 1, jours: 1, apres: '09:00', ou: 'Riad Nour' },
-    { salonId: 3, prestationId: 7, jours: 2, apres: '14:00', ou: 'Nails & Co' },
-    { salonId: 2, prestationId: 6, jours: 4, apres: '11:00', ou: 'Atlas Barber' },
-    { salonId: 1, prestationId: 2, jours: 9, apres: '16:00', ou: 'Riad Nour' },
-  ]
+  const salons = await salonsAvecPrestations(3)
+  if (salons.length === 0) { dit(false, 'aucun salon en ligne avec un catalogue'); return }
+
+  /* Plusieurs salons, étalés sur dix jours : le tableau de bord montre le
+     prochain rendez-vous en grand et les suivants en dessous, il faut donc
+     plus d'un. */
+  const QUAND = [[1, '09:00'], [2, '14:00'], [4, '11:00'], [9, '16:00']]
+  const voulus = QUAND.map(([jours, apres], i) => {
+    const salon = salons[i % salons.length]
+    return {
+      salonId: salon.id,
+      prestationId: salon.prestations[i % salon.prestations.length],
+      jours, apres, ou: salon.nom,
+    }
+  })
 
   for (const v of voulus) {
     try {
@@ -186,10 +243,15 @@ async function semerCliente(tClient, tAdmin) {
    * rendez-vous est passé. Seul le recul des dates échappe à l'API.
    */
   const aReculer = []
-  for (const v of [
-    { salonId: 3, prestationId: 7, jours: 1, apres: '09:00', recul: 3, ou: 'Nails & Co' },
-    { salonId: 2, prestationId: 5, jours: 1, apres: '15:00', recul: 8, ou: 'Atlas Barber' },
-  ]) {
+  const passees = [[3, '09:00'], [8, '15:00']].map(([recul, apres], i) => {
+    const salon = salons[(i + 1) % salons.length]
+    return {
+      salonId: salon.id,
+      prestationId: salon.prestations[(i + 1) % salon.prestations.length],
+      jours: 1, apres, recul, ou: salon.nom,
+    }
+  })
+  for (const v of passees) {
     try {
       const r = await reserverPourLaCliente(tClient, v)
       if (!r) { dit(false, `aucun créneau à reculer chez ${v.ou}`); continue }
@@ -233,10 +295,32 @@ const CLIENTELE = [
 async function semerGerant(t) {
   console.log('\n─── Le gérant ──────────────────────────────────────')
 
-  const SALON = 2                      // Atlas Barber
-  const PRESTATIONS = [[4, 30], [5, 20], [6, 45]]   // coupe, barbe, coupe + barbe
-  const employes = (await appel(`/api/pro/salons/${SALON}/employes`, { jeton: t })).map((e) => e.id)
-  if (employes.length === 0) { dit(false, 'aucun praticien chez Atlas Barber'); return }
+  /*
+   * Le premier salon en ligne du gérant, avec son catalogue et son équipe.
+   *
+   * Découverts, comme du côté cliente : un numéro de salon écrit en dur ne
+   * désigne pas le même établissement d'une base à l'autre, et la saisie
+   * échoue alors dix fois de suite sur « cette prestation n'appartient pas à
+   * ce salon ».
+   */
+  const miens = await appel('/api/salons/me', { jeton: t })
+  const enLigne = miens.filter((x) => x.statut === 'ACTIF')
+  if (enLigne.length === 0) { dit(false, 'aucun salon en ligne sur ce compte'); return }
+
+  let SALON = null
+  let PRESTATIONS = []
+  let employes = []
+  for (const candidat of enLigne) {
+    const p = await appel(`/api/prestations/salon/${candidat.id}`, { jeton: t }).catch(() => [])
+    const e = await appel(`/api/pro/salons/${candidat.id}/employes`, { jeton: t }).catch(() => [])
+    if (p.length === 0 || e.length === 0) continue
+    SALON = candidat.id
+    PRESTATIONS = p.map((x) => [x.id, x.dureeMinutes])
+    employes = e.map((x) => x.id)
+    dit(true, `chez ${candidat.nom} — ${p.length} prestations, ${e.length} praticien${e.length > 1 ? 's' : ''}`)
+    break
+  }
+  if (!SALON) { dit(false, 'aucun salon en ligne avec un catalogue et une équipe'); return }
 
   /*
    * Ce soir d'abord.
