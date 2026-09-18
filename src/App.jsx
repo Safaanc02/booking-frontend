@@ -21,7 +21,9 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <div className="flex min-h-screen flex-col">
-          {/* Le tracé de l'arche, déclaré une fois pour toute l'application. */}<Header />
+          {/* Rendu une fois pour toutes les routes : le logo et la navigation
+              sont donc sur chaque page, jusqu'à celle d'erreur. */}
+          <Header />
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<Home />} />
