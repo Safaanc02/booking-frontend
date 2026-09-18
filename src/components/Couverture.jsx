@@ -1,16 +1,15 @@
 import { useState } from "react"
 import { couleursSalon } from "../lib/identiteSalon"
 import { urlApi } from "../lib/format"
-import { Semis } from "./Motifs"
 import { Coiffure, Barbier, Onglerie, Esthetique, Hammam } from "./Glyphes"
 
 /**
  * Bandeau d'identité d'un salon.
  *
- * Rien n'est chargé : dégradé, trame de zellige et pictogramme du métier sont
- * dessinés. C'est ce qui permet de le mettre partout — liste de résultats,
- * fiche, tunnel — sans peser sur une connexion mobile. Les teintes viennent
- * de lib/identiteSalon, qui explique pourquoi elles sont ce qu'elles sont.
+ * Rien n'est chargé : le dégradé et le pictogramme du métier sont dessinés.
+ * C'est ce qui permet de le mettre partout — liste de résultats, fiche,
+ * tunnel — sans peser sur une connexion mobile. Les teintes viennent de
+ * lib/identiteSalon, qui explique pourquoi elles sont ce qu'elles sont.
  */
 const GLYPHES = {
   COIFFURE: Coiffure, BARBIER: Barbier, ONGLERIE: Onglerie,
@@ -18,12 +17,8 @@ const GLYPHES = {
 }
 
 export default function Couverture({ salon, hauteur = "h-32", className = "", children }) {
-  const { sombre, clair, ancrage } = couleursSalon(salon)
+  const { sombre, clair } = couleursSalon(salon)
   const Glyphe = GLYPHES[salon?.categorie] ?? Coiffure
-  // L'identifiant du motif doit être unique dans la page : plusieurs
-  // couvertures cohabitent dans une liste, et deux <pattern> de même id
-  // feraient tous pointer sur le premier.
-  const id = `couverture-${salon?.id ?? "x"}`
 
   /*
    * La photo si le salon en a déposé une, l'identité dessinée sinon.
@@ -55,12 +50,6 @@ export default function Couverture({ salon, hauteur = "h-32", className = "", ch
         />
       ) : (
         <>
-          <Semis
-            id={id}
-            taille={104}
-            className="pointer-events-none absolute h-[190%] w-[190%] text-white/25"
-            style={{ inset: ancrage }}
-          />
           {/* Le pictogramme déborde et reste très pâle : il donne une texture
               et une indication de métier sans disputer la place au nom. */}
           <Glyphe className="pointer-events-none absolute -bottom-5 -right-3 h-28 w-28 text-white/20" />

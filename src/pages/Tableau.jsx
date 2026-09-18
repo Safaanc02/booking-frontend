@@ -6,7 +6,6 @@ import { heureLocale, instantLong, jourLong, prix, telephone } from "../lib/form
 import { aujourdhui, minuteCasablanca, salonsOuverts, salutation } from "../lib/maroc"
 import Loader from "../components/Loader"
 import { Horloge } from "../components/Glyphes"
-import { Marque } from "../components/Motifs"
 
 /*
  * Le tableau de bord — ce qui remplace la vitrine une fois connecté.
@@ -617,8 +616,7 @@ function SectionAdmin({ plateforme }) {
 function Titre({ children, complement, lien, libelleLien }) {
   return (
     <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-      <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight text-stone-900">
-        <Marque className="h-3 w-3 shrink-0 text-brand-400" />
+      <h2 className="flex flex-wrap items-baseline gap-x-2 text-lg font-bold tracking-tight text-stone-900">
         {children}
         {complement && <span className="text-sm font-normal text-stone-400">{complement}</span>}
       </h2>

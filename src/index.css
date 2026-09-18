@@ -54,86 +54,78 @@
 }
 
 @theme {
-  /* ---- Marque : le terracotta du logo ----
-     Relevé sur le logo lui-même (#a05030), et non approché à l'œil : c'est la
-     couleur du mot-symbole, celle qu'on verra dans l'en-tête à côté de chaque
-     bouton. Deux bruns voisins mais différents côte à côte se lisent comme
-     une erreur d'impression.
+  /* ---- La marque ----
 
-     L'échelle est dérivée de cette teinte, avec une saturation qui décroît
-     vers les extrêmes : une nuance très claire aussi saturée que sa base vire
-     au fluo, une très sombre à la boue.
+     Six couleurs données, une échelle complète. Cinq d'entre elles occupent un
+     cran exact — 200, 300, 500, 600, 700, 900 — et seuls le 400 et le 800 sont
+     interpolés entre leurs voisines, le 50 et le 100 étant l'abricot éclairci.
+     Rien n'est approché à l'œil : ce que la palette dit, l'échelle le dit.
 
-     Contraste sur blanc : 600 → 5,67:1 (boutons, liens), 700 → 7,74:1 (AAA). */
-  --color-brand-50:  #f9f5f3;
-  --color-brand-100: #f3e9e5;
-  --color-brand-200: #ead3ca;
-  --color-brand-300: #dfb5a4;
-  --color-brand-400: #d48e73;
-  --color-brand-500: #c86b47;
-  --color-brand-600: #a15030;
-  --color-brand-700: #7f4229;
-  --color-brand-800: #603422;
-  --color-brand-900: #42251a;
+     Ce que chaque cran a le droit de porter, mesuré sur le fond ivoire :
 
-  /* ---- Les cinq couleurs de la palette ----
-     Quatre d'entre elles ne peuvent porter aucun texte : sur blanc, la sauge
-     plafonne à 2,39:1, la menthe à 1,60:1, la pêche à 1,87:1, le rose à
-     2,23:1. Il leur faut donc chacune une nuance sombre, dérivée de la même
-     teinte, pour écrire dessus ou à côté. La valeur donnée reste le 400 —
-     celle qu'on voit, celle des surfaces. */
+       200 abricot     1,61:1   aplat seulement, jamais de texte
+       300 saumon      2,10:1   aplat seulement
+       500 framboise   3,63:1   grand texte, jamais du corps de texte
+       600 grenat      6,34:1   liens, et boutons pleins (blanc dessus 6,48:1)
+       700 prune       8,23:1   survol, titres colorés
+       900 aubergine  13,26:1   panneaux sombres, texte appuyé
 
-  /* Sauge — le cadre du calendrier dans le logo. */
-  --color-sauge-50:  #f2f5f3;
-  --color-sauge-100: #e4eae6;
-  --color-sauge-200: #cbd6ce;
-  --color-sauge-400: #9eaba2;
-  --color-sauge-600: #6b7d72;
-  --color-sauge-700: #55655c;
-  --color-sauge-800: #3f4c44;
+     Le 500 est le piège de cette palette : c'est la couleur la plus vive, donc
+     celle qu'on veut mettre partout, et elle ne tient pas le corps de texte.
+     Les boutons prennent le 600. */
+  --color-brand-50:  #fff7f2;
+  --color-brand-100: #ffece1;
+  --color-brand-200: #ffbb94;
+  --color-brand-300: #fb9590;
+  --color-brand-400: #ea737d;
+  --color-brand-500: #dc586d;
+  --color-brand-600: #a33757;
+  --color-brand-700: #852e4e;
+  --color-brand-800: #662545;
+  --color-brand-900: #4c1d3d;
 
-  /* Menthe — la plus claire des cinq. Surfaces et états positifs. */
-  --color-menthe-50:  #f4f9f6;
-  --color-menthe-100: #e6f1ea;
-  --color-menthe-200: #bdd1c5;
-  --color-menthe-400: #9dbaa6;
-  --color-menthe-600: #5c8069;
-  --color-menthe-700: #486754;
+  /* ---- Les bandeaux ----
 
-  /* Pêche — les cases du calendrier. */
-  --color-peche-50:  #fdf6f1;
-  --color-peche-100: #faeade;
-  --color-peche-200: #f4d5c1;
-  --color-peche-400: #e8b298;
-  --color-peche-600: #c07a52;
-  --color-peche-700: #9a6040;
+     La page alterne des bandes claires pour donner un rythme sans filet gris.
+     Elles étaient sauge et menthe, du temps où la palette portait du vert ;
+     celle-ci n'en a pas, et un vert survivant au milieu de prunes se lirait
+     comme un oubli.
 
-  /* Rose poudré. */
-  --color-rose-50:  #fbf5f4;
-  --color-rose-100: #f6e8e6;
-  --color-rose-200: #ecd2cf;
-  --color-rose-400: #d3a29d;
-  --color-rose-600: #a86d67;
-  --color-rose-700: #875650;
+     Deux teintes de la même famille suffisent, prises aux deux bouts : l'une
+     tire vers l'abricot, l'autre vers la prune. Assez proches pour rester une
+     seule palette, assez distinctes pour que deux sections voisines ne se
+     confondent pas.
 
-  /* Terre — la seule des cinq qui porte du texte (4,65:1). */
-  --color-terre-100: #f2e5e4;
-  --color-terre-400: #c08b89;
-  --color-terre-600: #a36361;
-  --color-terre-700: #834f4d;
+     Chacune garde une nuance sombre, car aucune des deux ne porte de texte. */
+
+  /* Aube — le bout clair, côté abricot. */
+  --color-aube-50:  #fff6f0;
+  --color-aube-100: #ffe9dc;
+  --color-aube-200: #ffd2b8;
+  --color-aube-600: #b55f33;
+  --color-aube-700: #8e4a28;
+  --color-aube-800: #6b381e;
+
+  /* Vigne — le bout sombre, côté prune. */
+  --color-vigne-50:  #fdf4f7;
+  --color-vigne-100: #fae6ec;
+  --color-vigne-200: #f2c9d6;
+  --color-vigne-600: #a33757;
+  --color-vigne-700: #852e4e;
+  --color-vigne-800: #662545;
 
   /* ---- Fonds ----
      Un ivoire à peine teinté de la marque plutôt qu'un gris : le stone-50 de
      Tailwind tire vers le froid, et c'est ce qui donnait cet air de gabarit
      non fini. Le crème reste discret — une longue liste de résultats sur un
      fond saturé fatigue avant la fin de la page. */
-  --color-ivoire: #faf8f6;
-  --color-sable:  #f4efe9;
+  --color-ivoire: #fffaf7;
+  --color-sable:  #fff1ea;
 
   /* ---- Texte ----
-     Un presque-noir tiède, tiré de la teinte de la marque et non du gris :
-     16:1 sur blanc, et il s'accorde aux bruns sans les salir. */
-  --color-encre: #30201a;
+     Un presque-noir tiré de l'aubergine et non du gris : 16:1 sur l'ivoire, et
+     il s'accorde aux prunes sans les salir. */
+  --color-encre: #35142b;
 
   /* ---- Typographie ----
      Deux familles, deux rôles. Fraunces porte les titres : ses formes douces

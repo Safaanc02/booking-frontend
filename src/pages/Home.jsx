@@ -4,7 +4,6 @@ import { publicApi } from "../api/bookingApi"
 import SearchBar from "../components/SearchBar"
 import SalonCard from "../components/SalonCard"
 import { NoteResume } from "../components/Etoiles"
-import { Semis, Panneau, Marque } from "../components/Motifs"
 import {
   Coiffure, Barbier, Onglerie, Esthetique, Hammam,
   Horloge, Etiquette, Rappel,
@@ -102,8 +101,7 @@ function TitreSection({ titre, complement, lien, libelleLien }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h2 className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-stone-900">
-          <Marque className="h-3 w-3 shrink-0 text-brand-500" />
+        <h2 className="text-xl font-bold tracking-tight text-stone-900">
           {titre}
         </h2>
         {complement && <p className="mt-1 text-sm text-stone-500">{complement}</p>}
@@ -399,35 +397,6 @@ function Vitrine() {
       {/* Bandeau d'entrée                                                 */}
       {/* ---------------------------------------------------------------- */}
       <section className="relative overflow-hidden bg-gradient-to-b from-brand-50 via-brand-50/40 to-ivoire">
-        {/*
-          Une semaine, et non une trame répétée.
-
-          Un geste unique vaut mieux qu'un motif de fond sur un bandeau de
-          cette taille : le motif se lit comme du bruit sous un titre, la
-          semaine se lit comme une signature. Elle est placée derrière la carte
-          de créneaux et déborde volontairement du bandeau — une forme coupée
-          par le bord paraît plus grande que le cadre, et suggère qu'il y en a
-          davantage hors champ.
-
-          Seule, désormais. Un semis occupait aussi la moitié gauche : depuis
-          que les deux dessinent la même grille, ils ne se répondaient plus,
-          ils se répétaient — et le haut du bandeau tournait au bruit. La
-          semaine se remplit de gauche à droite, encore faut-il la voir en
-          entier pour le comprendre.
-
-          Masquée en bas pour s'éteindre avant le bas de section, et cachée
-          sous lg : à la largeur d'un téléphone, la colonne de droite passe
-          sous le titre et la semaine se retrouverait derrière le texte.
-        */}
-        <Panneau
-          taille={520}
-          className="pointer-events-none absolute -right-16 -top-10 hidden lg:block"
-          style={{
-            maskImage: "linear-gradient(to bottom, #000 52%, transparent 94%)",
-            WebkitMaskImage: "linear-gradient(to bottom, #000 52%, transparent 94%)",
-          }}
-        />
-
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-12 pt-14 lg:grid-cols-[1.15fr_minmax(0,0.85fr)] lg:gap-14 lg:pb-14 lg:pt-20">
           <div>
             <Accroche />
@@ -507,11 +476,6 @@ function Vitrine() {
               >
                 {/* Le motif n'apparaît qu'au survol : la grille reste calme au
                     repos, et le geste est récompensé. */}
-                <Semis
-                  id={`semis-${cle}`}
-                  taille={92}
-                  className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 text-brand-400 opacity-0 transition-opacity duration-300 group-hover:opacity-60"
-                />
                 <Glyphe className="relative h-8 w-8 text-brand-600 transition-transform duration-300 group-hover:scale-110" />
                 <p className="relative mt-4 font-semibold text-stone-900">{libelle}</p>
                 <p className="relative mt-0.5 text-xs text-stone-500">{detail}</p>
@@ -531,12 +495,7 @@ function Vitrine() {
       {/* étiquettes de filtre.                                             */}
       {/* ---------------------------------------------------------------- */}
       {reseau.villes.length > 0 && (
-        <section className="relative isolate overflow-hidden border-y border-sauge-200/60 bg-sauge-50">
-          <Semis
-            id="semis-villes"
-            taille={120}
-            className="pointer-events-none absolute inset-0 h-full w-full text-sauge-700/[0.14]"
-          />
+        <section className="relative isolate overflow-hidden border-y border-aube-200/60 bg-aube-50">
           <div className="relative mx-auto max-w-6xl px-4 py-14">
             <TitreSection
               titre="Où nous sommes"
@@ -549,11 +508,11 @@ function Vitrine() {
                     to={`/recherche?ville=${encodeURIComponent(ville)}`}
                     className="group inline-flex items-baseline gap-2"
                   >
-                    <span className="font-titre text-2xl font-semibold text-stone-900 decoration-sauge-600 decoration-2 underline-offset-[6px] transition group-hover:text-sauge-800 group-hover:underline sm:text-3xl">
+                    <span className="font-titre text-2xl font-semibold text-stone-900 decoration-aube-600 decoration-2 underline-offset-[6px] transition group-hover:text-aube-800 group-hover:underline sm:text-3xl">
                       {ville}
                     </span>
                     {reseau.complet && (
-                      <span className="text-sm tabular-nums text-stone-400 transition group-hover:text-sauge-700">
+                      <span className="text-sm tabular-nums text-stone-400 transition group-hover:text-aube-700">
                         {parVille(ville)}
                       </span>
                     )}
@@ -589,7 +548,7 @@ function Vitrine() {
       {/* traits nus sur du blanc ne retenaient pas l'œil, et la forme      */}
       {/* rappelle la colonnade des métiers plus haut.                      */}
       {/* ---------------------------------------------------------------- */}
-      <section className="border-y border-menthe-200 bg-menthe-50">
+      <section className="border-y border-vigne-200 bg-vigne-50">
         <div className="mx-auto max-w-6xl px-4 py-14">
           <div className="grid gap-8 sm:grid-cols-3 sm:gap-10">
             {PROMESSES.map(({ glyphe, titre, texte }) => {
@@ -598,7 +557,10 @@ function Vitrine() {
                 <div key={titre}>
                   <div
                     className="relative isolate grid h-12 w-12 place-items-center rounded-full"
-                    style={{ background: "linear-gradient(150deg, #7f4229, #c86b47)" }}
+                    /* Prune vers framboise : les deux crans de la marque qui portent le
+     blanc. Écrit ici plutôt qu'en classes parce qu'un dégradé à deux
+     arrêts précis ne se dit pas en utilitaires sans les empiler. */
+                    style={{ background: "linear-gradient(150deg, #852e4e, #dc586d)" }}
                   >
                     <Glyphe className="h-5 w-5 text-white" />
                   </div>
@@ -616,15 +578,6 @@ function Vitrine() {
       {/* ---------------------------------------------------------------- */}
       <section className="px-4 pb-16">
         <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-brand-700 px-8 py-12 sm:px-12">
-          <Semis
-            id="semis-pro"
-            taille={132}
-            className="pointer-events-none absolute inset-0 h-full w-full text-white/25"
-            style={{
-              maskImage: "radial-gradient(90% 120% at 100% 50%, #000 10%, transparent 65%)",
-              WebkitMaskImage: "radial-gradient(90% 120% at 100% 50%, #000 10%, transparent 65%)",
-            }}
-          />
           <div className="relative max-w-2xl">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-200">
               Vous gérez un salon

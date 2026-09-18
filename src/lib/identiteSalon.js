@@ -32,43 +32,39 @@ const empreinte = (texte) => {
   return Math.abs(h)
 }
 
-/**
- * Palettes par métier.
- *
- * La teinte dit l'activité avant que l'œil n'atteigne le libellé : bordeaux
- * pour la coiffure, encre pour le barbier, rose pour l'onglerie, jade pour
- * l'esthétique, cuivre pour le hammam. Deux variantes par métier évitent que
- * deux salons de la même liste se ressemblent.
- */
 /*
- * Une famille de couleurs par métier, tirée des cinq de la marque.
+ * Une famille de couleurs par métier, tirée de la palette de la marque.
  *
  * Chaque bandeau est un dégradé du sombre vers le clair : la version sombre
  * porte le texte blanc des pastilles posées dessus, la claire donne la
- * lumière. Les cinq teintes de la palette ne pouvaient pas jouer les deux
- * rôles — sur blanc, quatre d'entre elles plafonnent sous 2,4:1 —, chacune a
- * donc sa nuance foncée dérivée de la même teinte.
+ * lumière. Aucune couleur de la palette ne peut jouer les deux rôles — les
+ * deux plus vives plafonnent à 2,1:1 sur blanc —, chacune a donc sa nuance
+ * foncée dérivée de la même teinte.
  *
- * Les cinq métiers sont écartés en teinte autant qu'en clarté : un bandeau
- * doit se reconnaître sans lire l'étiquette. La première version donnait au
- * barbier et à l'onglerie deux roses voisins, et les deux cartes devenaient
- * indiscernables côte à côte dans une page de résultats — ce qui ôtait à ces
- * couleurs leur seule raison d'être.
+ * Les cinq métiers doivent se reconnaître sans lire l'étiquette. C'est la
+ * seule raison d'être de ces couleurs, et c'est là que les deux versions
+ * précédentes ont échoué : barbier et onglerie se retrouvaient en roses
+ * voisins, indiscernables côte à côte dans une page de résultats.
  *
- * Terracotta pour la coiffure, qui est la couleur de la marque et le métier
- * le plus courant ; vert sombre pour le barbier, seul registre neutre de la
- * palette et qui va au métier ; rose pour l'onglerie ; menthe pour
- * l'esthétique ; pêche pour le hammam. Deux variantes chacune, pour que deux
- * salons voisins du même métier ne se ressemblent pas trait pour trait.
+ * La palette actuelle ne tient qu'une seule famille — de l'abricot à
+ * l'aubergine, soixante-dix degrés de teinte en tout. Impossible d'y écarter
+ * cinq métiers sur la teinte seule : il a fallu les étager aussi en clarté,
+ * et chercher l'échelonnement qui maximise la plus petite distance entre eux.
+ *
+ * Le résultat est mesuré, pas jugé à l'œil. La paire la plus proche est à
+ * ΔE 25,5 — au-delà de 20, deux surfaces se distinguent sans hésitation —
+ * et chaque bandeau sombre porte le blanc au-dessus de 6,2:1.
+ *
+ * Deux variantes par métier, pour que deux salons voisins du même métier ne
+ * se ressemblent pas trait pour trait.
  */
 const PALETTES = {
-  COIFFURE: [["#5d2f19", "#ac6039"], ["#774228", "#bb7958"]],
-  ONGLERIE: [["#8d3f46", "#bb8186"], ["#9f565c", "#c5a5a7"]],
-  SPA: [["#dd8a40", "#eac5a4"], ["#dc9f6a", "#f0ddcc"]],
-  BARBIER: [["#293d31", "#5e7869"], ["#3f5046", "#788c80"]],
-  ESTHETIQUE: [["#52986a", "#9bbfa7"], ["#70a481", "#bccdc2"]],
+  COIFFURE: [["#b2302a", "#e4a3a0"], ["#b54a45", "#e6c8c7"]],
+  ONGLERIE: [["#741b29", "#dd8895"], ["#7d303c", "#dcb1b8"]],
+  SPA: [["#80421e", "#e2b398"], ["#885334", "#e3ccbf"]],
+  BARBIER: [["#7e3065", "#cc85b5"], ["#874572", "#cfaac3"]],
+  ESTHETIQUE: [["#3d1521", "#ca728c"], ["#4c2430", "#ca9ba9"]],
 }
-
 /** Décalages du motif, pour que deux salons ne le placent pas au même endroit. */
 const ANCRAGES = ["-12% -18%", "62% -22%", "-18% 48%", "70% 55%"]
 
