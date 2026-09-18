@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import keycloak from "../keycloak"
+import { retenirSession } from "./sessionConnue"
 import { AuthContext } from "./AuthContext"
 
 /**
@@ -57,11 +58,15 @@ export default function AuthProvider({ children }) {
         setAuthenticated(auth)
         setProfil(auth ? keycloak.tokenParsed : null)
         setReady(true)
+        retenirSession(auth)
       })
       .catch((err) => {
         // Keycloak injoignable : le site reste consultable en mode visiteur.
         console.error("Initialisation Keycloak impossible", err)
         setReady(true)
+        // Keycloak muet : on ne sait plus rien de la session, on l'oublie
+        // plutôt que de laisser la page parier sur un souvenir périmé.
+        retenirSession(false)
       })
   }, [])
 
@@ -108,7 +113,10 @@ export default function AuthProvider({ children }) {
         ...optionsSures(options),
       }),
       register: () => keycloak.register({ redirectUri: window.location.href, locale: "fr" }),
-      logout: () => keycloak.logout({ redirectUri: window.location.origin }),
+      logout: () => {
+        retenirSession(false)
+        return keycloak.logout({ redirectUri: window.location.origin })
+      },
     }
   }, [ready, authenticated, profil])
 

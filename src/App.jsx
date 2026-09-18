@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom"
 import AuthProvider from "./auth/AuthProvider"
 import Header from "./components/Header"
-import Home from "./pages/Home"
+import Accueil from "./pages/Home"
 import Results from "./pages/Results"
 import SalonDetails from "./pages/SalonDetails"
 import Reservation from "./pages/Reservation"
@@ -26,7 +26,8 @@ export default function App() {
           <Header />
           <main className="flex-1">
             <Routes>
-              <Route path="/" element={<Home />} />
+              {/* La vitrine pour qui découvre, le tableau de bord pour qui revient. */}
+              <Route path="/" element={<Accueil />} />
               <Route path="/recherche" element={<Results />} />
               <Route path="/salon/:id" element={<SalonDetails />} />
               <Route path="/salon/:id/reserver" element={<Reservation />} />

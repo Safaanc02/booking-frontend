@@ -147,6 +147,16 @@ export const proApi = {
   changerStatut: (reservationId, statut) =>
     client.patch(`/api/pro/reservations/${reservationId}/statut`, null, { params: { statut } }).then((r) => r.data),
 
+  /**
+   * La journée du compte connecté, tous ses salons confondus.
+   *
+   * Distincte de `monPlanning`, qui ne rend que les rendez-vous dont on est
+   * le praticien : un gérant qui ne coupe pas les cheveux n'y voit rien,
+   * alors que sa journée est pleine.
+   */
+  maJournee: (date) =>
+    client.get('/api/pro/ma-journee', { params: { date } }).then((r) => r.data),
+
   /** Planning personnel du compte connecté, tous salons confondus. */
   monPlanning: ({ date, jours = 1 } = {}) =>
     client.get('/api/pro/mon-planning', { params: { date, jours } }).then((r) => r.data),

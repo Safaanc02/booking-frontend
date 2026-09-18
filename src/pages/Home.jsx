@@ -9,10 +9,12 @@ import {
   Coiffure, Barbier, Onglerie, Esthetique, Hammam,
   Horloge, Etiquette, Rappel,
 } from "../components/Glyphes"
-import { ZONE, prix, duree, jourLong, heureLocale } from "../lib/format"
-
-/** Amplitude d'ouverture courante des salons du réseau, en heures locales. */
-const OUVERTURE = [9, 19]
+import { prix, duree, jourLong, heureLocale } from "../lib/format"
+import { OUVERTURE, heureCasablanca, minuteCasablanca } from "../lib/maroc"
+import { useAuth } from "../auth/useAuth"
+import { sessionConnue } from "../auth/sessionConnue"
+import Tableau from "./Tableau"
+import Loader from "../components/Loader"
 
 /**
  * Les cinq familles de prestations.
@@ -59,23 +61,6 @@ const PROMESSES = [
   { glyphe: "rappel", titre: "Rappel la veille",
     texte: "Un message avant le rendez-vous, et un lien pour annuler si besoin." },
 ]
-
-/**
- * L'heure de Casablanca, en nombre.
- *
- * Par formatToParts et non par format : en français, `format` rend l'heure
- * seule sous la forme « 01 h ». Number() en tirait NaN, toute comparaison
- * devenait fausse, et la page annonçait des salons ouverts à deux heures du
- * matin — exactement le contraire de ce qu'elle est censée démontrer.
- */
-const heureCasablanca = () => Number(
-  new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", hour12: false, timeZone: ZONE })
-    .formatToParts(new Date())
-    .find((part) => part.type === "hour")?.value)
-
-const minuteCasablanca = () =>
-  new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: ZONE })
-    .format(new Date())
 
 /**
  * Bandeau d'accroche, réglé sur l'heure de Casablanca.
@@ -336,7 +321,28 @@ function SqueletteApercu({ nom }) {
   )
 }
 
-export default function Home() {
+/**
+ * L'accueil, selon qu'on découvre ou qu'on revient.
+ *
+ * La vitrine explique ce qu'est DarZin : c'est le bon écran pour qui arrive,
+ * et le mauvais pour qui s'est connecté — un gérant qui ouvre le site le matin
+ * n'a pas besoin qu'on lui présente le service dont il se sert.
+ *
+ * Keycloak met un instant à répondre, et il faut bien afficher quelque chose
+ * pendant ce temps. Servir la vitrine par défaut la ferait clignoter sous les
+ * yeux de qui est déjà client — précisément ce qu'on vient de lui retirer ;
+ * servir une attente par défaut ferait patienter le visiteur anonyme, qui est
+ * le cas courant, pour une vérification qui ne le concerne pas.
+ *
+ * On tranche donc avec ce que le navigateur se rappelle de sa dernière visite.
+ */
+export default function Accueil() {
+  const { ready, authenticated } = useAuth()
+  if (ready) return authenticated ? <Tableau /> : <Vitrine />
+  return sessionConnue() ? <Loader label="Votre tableau de bord…" /> : <Vitrine />
+}
+
+function Vitrine() {
   const [reseau, setReseau] = useState({
     salons: [], villes: [], total: 0, complet: false, erreur: false,
   })
