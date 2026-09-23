@@ -70,3 +70,18 @@
 		format console
 	}
 }
+
+# Sonde de santé, sur un port interne jamais publié.
+#
+# Elle ne peut pas interroger le site lui-même : dès qu'il porte un nom, Caddy
+# redirige le port 80 vers HTTPS, et la sonde suivait la redirection jusqu'à
+# une poignée de main TLS pour un nom qui n'était pas le sien. Le conteneur
+# était marqué « unhealthy » pendant que le site répondait parfaitement — le
+# genre de faux signal qui fait ignorer une vraie panne, et qui bloque un
+# redéploiement le jour où l'on attend la santé des conteneurs.
+#
+# Une adresse réduite à un port ne demande aucun certificat et ne redirige
+# rien : elle répond, donc Caddy est debout et sa configuration est valide.
+:2020 {
+	respond 204
+}
