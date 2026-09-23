@@ -168,6 +168,11 @@ export const proApi = {
   maJournee: (date) =>
     client.get('/api/pro/ma-journee', { params: { date } }).then((r) => r.data),
 
+  /** Les chiffres du salon. Sans dates, le serveur rend le mois en cours. */
+  statistiques: (salonId, { depuis, jusqua } = {}) =>
+    client.get(`/api/pro/salons/${salonId}/statistiques`, { params: { depuis, jusqua } })
+      .then((r) => r.data),
+
   /** Planning personnel du compte connecté, tous salons confondus. */
   monPlanning: ({ date, jours = 1 } = {}) =>
     client.get('/api/pro/mon-planning', { params: { date, jours } }).then((r) => r.data),

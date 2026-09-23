@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom"
 import { prestationsApi, salonsApi } from "../../api/bookingApi"
 import Loader, { ErrorState } from "../../components/Loader"
 import OngletAgenda from "./OngletAgenda"
+import OngletChiffres from "./OngletChiffres"
 import OngletPrestations from "./OngletPrestations"
 import OngletEquipe from "./OngletEquipe"
 import OngletHoraires from "./OngletHoraires"
@@ -13,6 +14,7 @@ import OngletFiche from "./OngletFiche"
 
 const ONGLETS = [
   ["agenda", "Agenda"],
+  ["chiffres", "Chiffres"],
   ["prestations", "Prestations"],
   ["equipe", "Équipe"],
   ["horaires", "Horaires"],
@@ -94,6 +96,7 @@ export default function ProSalon() {
 
       <div className="mt-6">
         {onglet === "agenda" && <OngletAgenda salon={salon} />}
+        {onglet === "chiffres" && <OngletChiffres salon={salon} />}
         {onglet === "prestations" && <OngletPrestations salon={salon} onChange={() => charger(true)} />}
         {onglet === "equipe" && <OngletEquipe salon={salon} />}
         {onglet === "horaires" && <OngletHoraires salon={salon} />}
