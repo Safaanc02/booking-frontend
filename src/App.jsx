@@ -13,7 +13,9 @@ import MonPlanning from "./pages/pro/MonPlanning"
 import AdminSalons from "./pages/admin/AdminSalons"
 import Professionnels from "./pages/Professionnels"
 import Account from "./pages/Account"
-import Legal from "./pages/Legal"
+import MentionsLegales from "./pages/legal/MentionsLegales"
+import Conditions from "./pages/legal/Conditions"
+import Confidentialite from "./pages/legal/Confidentialite"
 import NotFound from "./pages/NotFound"
 
 export default function App() {
@@ -41,7 +43,9 @@ export default function App() {
               <Route path="/mon-planning" element={<RequireRole role="pro"><MonPlanning /></RequireRole>} />
               <Route path="/pro/salon/:id" element={<RequireRole role="pro"><ProSalon /></RequireRole>} />
               <Route path="/admin" element={<RequireRole role="admin"><AdminSalons /></RequireRole>} />
-              <Route path="/mentions-legales" element={<Legal />} />
+              <Route path="/mentions-legales" element={<MentionsLegales />} />
+              <Route path="/conditions" element={<Conditions />} />
+              <Route path="/confidentialite" element={<Confidentialite />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
@@ -53,6 +57,8 @@ export default function App() {
                   Vous êtes un salon ?
                 </Link>
                 <Link to="/mentions-legales" className="hover:text-stone-800">Mentions légales</Link>
+                <Link to="/conditions" className="hover:text-stone-800">Conditions</Link>
+                <Link to="/confidentialite" className="hover:text-stone-800">Données personnelles</Link>
               </span>
             </div>
           </footer>
