@@ -17,6 +17,7 @@
     "verifier:proximite": "node scripts/verifier-proximite.mjs",
     "verifier:inscription": "node scripts/verifier-inscription.mjs",
     "verifier:tableau": "node scripts/verifier-tableau.mjs",
+    "verifier:cloisonnement": "node scripts/verifier-cloisonnement.mjs",
     "semer:demo": "node scripts/semer-demo.mjs"
   },
   "dependencies": {
