@@ -157,12 +157,16 @@ export default function Tableau() {
       <div className="mt-10 space-y-10">
         {estAdmin && <SectionAdmin plateforme={plateforme} demandes={demandes} />}
         {estPro && <SectionPro journee={journeeRestante} salons={salons} />}
-        <SectionClient
-          aVenir={estAdmin || estPro ? aVenir : aVenir.slice(1)}
-          avisAttendus={avisAttendus}
-          historique={reservations}
-          seul={!estAdmin && !estPro}
-        />
+        {/* Rien de la cliente pour l'équipe : un administrateur ne réserve pas,
+            et son écran ne doit pas ressembler à celui d'un particulier. */}
+        {!estAdmin && (
+          <SectionClient
+            aVenir={estPro ? aVenir : aVenir.slice(1)}
+            avisAttendus={avisAttendus}
+            historique={reservations}
+            seul={!estPro}
+          />
+        )}
       </div>
     </div>
   )

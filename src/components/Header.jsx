@@ -41,7 +41,14 @@ export default function Header() {
               Vous êtes un salon ?
             </NavLink>
           )}
-          {authenticated && <NavLink to="/compte" className={lien}>Mes réservations</NavLink>}
+          {/* Pas pour l'équipe : un administrateur n'est pas un client, il ne
+              réserve pas. L'entrée le menait vers une page toujours vide, et
+              donnait à son écran l'allure de celui d'une cliente — alors que
+              c'est un poste de travail, pas un compte de particulier.
+              Un gérant la garde : il peut très bien réserver ailleurs. */}
+          {authenticated && !hasRole("admin") && (
+            <NavLink to="/compte" className={lien}>Mes réservations</NavLink>
+          )}
           {hasRole("pro") && <NavLink to="/mon-planning" className={lien}>Mon planning</NavLink>}
           {hasRole("pro") && <NavLink to="/pro" className={lien}>Mon salon</NavLink>}
           {hasRole("admin") && <NavLink to="/admin" className={lien}>Administration</NavLink>}
