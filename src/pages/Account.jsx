@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { reservationsApi, avisApi } from "../api/bookingApi"
 import { useAuth } from "../auth/useAuth"
-import { prix, instantLong } from "../lib/format"
+import { prix, instantLong, isoDate, jourCourt } from "../lib/format"
 import Loader, { EmptyState, ErrorState } from "../components/Loader"
 import Etoiles from "../components/Etoiles"
 
@@ -52,6 +52,14 @@ export default function Account() {
     }, 150)
     return () => clearTimeout(t)
   }, [avisDemande, etat.statut])
+
+  /**
+   * Rendez-vous dont le panneau de déplacement est ouvert.
+   *
+   * Un seul à la fois : deux calendriers ouverts côte à côte dans une liste
+   * de rendez-vous, on ne sait plus lequel on déplace.
+   */
+  const [deplacement, setDeplacement] = useState(null)
 
   const annuler = (id) => {
     setAction({ id, erreur: null })
@@ -109,7 +117,16 @@ export default function Account() {
         )}
 
         {etat.statut === "ok" && aVenir.length > 0 && (
-          <Section titre="À venir" liste={aVenir} onAnnuler={annuler} enCours={action.id} annulable />
+          <Section
+            titre="À venir"
+            liste={aVenir}
+            onAnnuler={annuler}
+            enCours={action.id}
+            annulable
+            deplacement={deplacement}
+            onDeplacer={setDeplacement}
+            onDeplace={() => { setDeplacement(null); charger() }}
+          />
         )}
         {etat.statut === "ok" && passees.length > 0 && (
           <Section titre="Historique" liste={passees} onAvis={charger} avisDemande={avisDemande} />
@@ -119,7 +136,8 @@ export default function Account() {
   )
 }
 
-function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis, avisDemande = null }) {
+function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis, avisDemande = null,
+                  deplacement = null, onDeplacer, onDeplace }) {
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-400">{titre}</h2>
@@ -155,6 +173,20 @@ function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis, 
                 {/* Le bouton n'apparaît que si le serveur dit l'annulation
                     encore possible. L'afficher puis répondre 409 est une
                     promesse qu'on ne tient pas. */}
+                {/* Déplacer avant annuler, et plus en évidence.
+                    Une cliente empêchée annule faute de mieux, et souvent ne
+                    reprend pas : le salon perd le rendez-vous là où un
+                    décalage de deux heures aurait suffi. Le serveur applique
+                    au déplacement le même préavis qu'à l'annulation — les
+                    deux boutons apparaissent et disparaissent ensemble. */}
+                {annulable && r.annulable && (
+                  <button
+                    onClick={() => onDeplacer?.(deplacement === r.id ? null : r.id)}
+                    className="rounded-lg border border-brand-300 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
+                  >
+                    {deplacement === r.id ? "Fermer" : "Déplacer"}
+                  </button>
+                )}
                 {annulable && (
                   r.annulable ? (
                     <button
@@ -173,6 +205,16 @@ function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis, 
                   )
                 )}
               </div>
+              {deplacement === r.id && (
+                <div className="w-full">
+                  <PanneauDeplacement
+                    reservation={r}
+                    onFerme={() => onDeplacer?.(null)}
+                    onDeplace={onDeplace}
+                  />
+                </div>
+              )}
+
               {/* Le dépôt d'un avis n'est proposé qu'après un rendez-vous
                   effectivement honoré, et une seule fois. */}
               {r.statut === "HONOREE" && (
@@ -191,6 +233,105 @@ function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis, 
         })}
       </ul>
     </section>
+  )
+}
+
+/**
+ * Choix d'une nouvelle heure pour un rendez-vous déjà pris.
+ *
+ * L'API savait déplacer depuis le début ; il manquait le bouton. Une cliente
+ * empêchée n'avait donc que « Annuler » — et une annulation ne se rattrape
+ * pas : elle ne reprend pas rendez-vous dans la foulée, et le salon compte un
+ * trou là où un décalage de deux heures aurait suffi.
+ *
+ * Les créneaux viennent d'une route à part, qui fait abstraction du
+ * rendez-vous qu'on déplace. Sans elle, avancer de 14 h à 14 h 30 est refusé
+ * par son propre rendez-vous, qui occupe encore la place qu'on veut quitter.
+ */
+function PanneauDeplacement({ reservation, onFerme, onDeplace }) {
+  const [jour, setJour] = useState(() => isoDate(new Date()))
+  const [creneaux, setCreneaux] = useState({ statut: "chargement", data: [] })
+  const [envoi, setEnvoi] = useState({ enCours: false, erreur: null })
+
+  useEffect(() => {
+    let vivant = true
+    setCreneaux({ statut: "chargement", data: [] })
+    reservationsApi
+      .creneauxPourDeplacement(reservation.id, jour)
+      .then((data) => { if (vivant) setCreneaux({ statut: "ok", data }) })
+      .catch(() => { if (vivant) setCreneaux({ statut: "erreur", data: [] }) })
+    return () => { vivant = false }
+  }, [reservation.id, jour])
+
+  /* Quatorze jours : au-delà, un salon ne sait pas encore qui travaille, et
+     la liste devient un mur de dates sur lesquelles on ne peut rien réserver. */
+  const jours = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() + i)
+    return isoDate(d)
+  })
+
+  const deplacer = (creneau) => {
+    setEnvoi({ enCours: true, erreur: null })
+    reservationsApi
+      .deplacer(reservation.id, { debut: creneau.debut, employeId: reservation.employeId })
+      .then(() => onDeplace?.())
+      .catch((erreur) => setEnvoi({ enCours: false, erreur }))
+  }
+
+  return (
+    <div className="mt-3 rounded-xl bg-stone-50 p-4 ring-1 ring-stone-200">
+      <p className="text-sm text-stone-600">
+        Nouvelle heure pour <strong className="text-stone-900">{reservation.prestation}</strong>
+        {reservation.employe && <> avec {reservation.employe}</>}
+      </p>
+
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+        {jours.map((d) => (
+          <button
+            key={d}
+            onClick={() => setJour(d)}
+            className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium ring-1 ${
+              d === jour
+                ? "bg-brand-600 text-white ring-brand-600"
+                : "bg-white text-stone-600 ring-stone-200 hover:bg-stone-100"
+            }`}
+          >
+            {jourCourt(d)}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 min-h-10">
+        {creneaux.statut === "chargement" && <p className="text-xs text-stone-400">Recherche des créneaux…</p>}
+        {creneaux.statut === "erreur" && (
+          <p className="text-xs text-red-700">Les créneaux n'ont pas pu être chargés.</p>
+        )}
+        {creneaux.statut === "ok" && creneaux.data.length === 0 && (
+          <p className="text-xs text-stone-400">Aucun créneau libre ce jour-là.</p>
+        )}
+        {creneaux.statut === "ok" && creneaux.data.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {creneaux.data.map((c) => (
+              <button
+                key={c.debut}
+                onClick={() => deplacer(c)}
+                disabled={envoi.enCours}
+                className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-stone-700 ring-1 ring-stone-200 hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-300 disabled:opacity-50"
+              >
+                {String(c.heure).slice(0, 5)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {envoi.erreur && <p className="mt-2 text-xs text-red-700">{envoi.erreur.message}</p>}
+
+      <button onClick={onFerme} className="mt-3 text-xs text-stone-500 hover:text-stone-800">
+        Garder l'heure actuelle
+      </button>
+    </div>
   )
 }
 

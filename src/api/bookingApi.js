@@ -125,6 +125,17 @@ export const reservationsApi = {
   mesReservations: () => client.get("/api/reservations/me").then((r) => r.data),
   creer: (payload) => client.post("/api/reservations", payload).then((r) => r.data),
   annuler: (id) => client.patch(`/api/reservations/${id}/annuler`).then((r) => r.data),
+  /**
+   * Les créneaux où ce rendez-vous peut être déplacé, un jour donné.
+   *
+   * Route à part de /api/public/…/disponibilites : celle-ci fait abstraction
+   * du rendez-vous qu'on déplace. Sans quoi un client qui veut avancer de
+   * 14 h à 14 h 30 se voit refuser la place par son propre rendez-vous.
+   */
+  creneauxPourDeplacement: (id, date) =>
+    client.get(`/api/reservations/${id}/creneaux`, { params: { date } }).then((r) => r.data),
+  deplacer: (id, { debut, employeId }) =>
+    client.put(`/api/reservations/${id}`, { debut, employeId }).then((r) => r.data),
 }
 
 export const salonsApi = {
