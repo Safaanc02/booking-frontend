@@ -6,15 +6,29 @@
 # realm portables (une URI relative suffit) et donne une seule adresse à
 # transmettre.
 #
-# Caddy termine le TLS tout seul quand un nom de domaine est fourni ; derrière
+# Caddy termine le TLS tout seul quand on lui donne un nom de domaine ; derrière
 # un tunnel, le chiffrement est assuré en amont et l'on reste en clair ici.
+#
+# D'où l'adresse configurable. `:80` — la valeur par défaut — n'est qu'un port :
+# Caddy sert alors en clair et ne demande aucun certificat. Renseignez
+# ADRESSE_SITE avec un nom d'hôte et il en obtient un auprès de Let's Encrypt,
+# sans rien d'autre à faire.
+#
+# Ce n'est pas un confort. `keycloak-js` signe sa demande d'autorisation avec
+# PKCE, qui passe par `crypto.subtle` — et les navigateurs ne l'exposent que
+# dans un contexte sécurisé. Servie en clair sur autre chose que localhost,
+# l'application se charge, et le bouton Connexion ne fait rien : « Web Crypto
+# API is not available ». Le HTTPS n'est donc pas une finition, c'est ce qui
+# rend la connexion possible.
+#
+# Sans nom de domaine, sslip.io en fournit un : 51.170.135.94.sslip.io résout
+# vers 51.170.135.94, et Let's Encrypt délivre pour ce nom-là.
 
 {
 	admin off
-	auto_https off
 }
 
-:80 {
+{$ADRESSE_SITE::80} {
 	encode zstd gzip
 
 	handle /api/* {
