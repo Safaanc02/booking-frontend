@@ -60,15 +60,23 @@ async function jeton(identifiant, motDePasse) {
   return (await r.json()).access_token
 }
 
-/** Appel brut : on veut le code, pas une exception. */
-async function appel(chemin, { jeton: j, methode = 'GET', corps = null } = {}) {
+/**
+ * Appel brut : on veut le code, pas une exception.
+ *
+ * `texte` sert les routes qui prennent un corps brut plutôt que du JSON — la
+ * note de suivi en est une. L'envoyer en JSON valait un 400 que la suite
+ * comptait comme un échec de cloisonnement, alors que le cloisonnement n'avait
+ * jamais été éprouvé : la note n'avait tout simplement pas été écrite.
+ */
+async function appel(chemin, { jeton: j, methode = 'GET', corps = null, texte = null } = {}) {
   const r = await fetch(`${API}${chemin}`, {
     method: methode,
     headers: {
       ...(j ? { Authorization: `Bearer ${j}` } : {}),
       ...(corps ? { 'Content-Type': 'application/json' } : {}),
+      ...(texte !== null ? { 'Content-Type': 'text/plain' } : {}),
     },
-    body: corps ? JSON.stringify(corps) : undefined,
+    body: corps ? JSON.stringify(corps) : (texte !== null ? texte : undefined),
   })
   let donnees = null
   try { donnees = await r.json() } catch { /* 204, ou corps vide */ }
@@ -152,9 +160,10 @@ if (!cible) {
   const cle = cible.telephone ?? cible.cle ?? cible.email
   const SECRET = `note-cloisonnement-${Date.now()}`
 
-  const { statut: pose } = await appel(`/api/pro/salons/${salonA.id}/clients/note`, {
-    jeton: jetons.proA, methode: 'PUT', corps: { cle, note: SECRET },
-  })
+  const { statut: pose } = await appel(
+    `/api/pro/salons/${salonA.id}/clients/note?cle=${encodeURIComponent(cle)}`, {
+      jeton: jetons.proA, methode: 'PUT', texte: SECRET,
+    })
   dire(pose === 200, `A écrit une note sur « ${cible.nom ?? cle} » (HTTP ${pose})`)
 
   /* B interroge la même personne, par la même clé. */
@@ -179,9 +188,10 @@ if (!cible) {
   dire(JSON.stringify(ficheA ?? {}).includes(SECRET), 'A relit sa propre note')
 
   /* Ménage : la note de test ne reste pas sur une vraie fiche. */
-  await appel(`/api/pro/salons/${salonA.id}/clients/note`, {
-    jeton: jetons.proA, methode: 'PUT', corps: { cle, note: cible.note ?? '' },
-  })
+  await appel(
+    `/api/pro/salons/${salonA.id}/clients/note?cle=${encodeURIComponent(cle)}`, {
+      jeton: jetons.proA, methode: 'PUT', texte: cible.note ?? '',
+    })
 }
 
 /* ---------- 3. Deux clientes ne prennent pas le même créneau ---------- */
