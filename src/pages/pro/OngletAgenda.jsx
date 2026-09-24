@@ -93,6 +93,22 @@ export default function OngletAgenda({ salon }) {
                         {r.origine !== "EN_LIGNE" && (
                           <span className="ml-2 text-xs font-normal text-stone-400">{ORIGINES[r.origine]}</span>
                         )}
+                        {/* « Les clientes ne viennent pas » est la première
+                            plainte de tous les salons, et le statut « Absent »
+                            ne déclenchait rien. Le compteur ne punit personne :
+                            il met l'information sous les yeux du gérant au
+                            moment où elle sert, quand il regarde sa journée et
+                            décide s'il rappelle pour confirmer.
+                            Dans ce salon seulement — une absence chez le voisin
+                            ne le regarde pas. */}
+                        {r.absencesClient > 0 && (
+                          <span
+                            title={`${r.absencesClient} absence${r.absencesClient > 1 ? "s" : ""} dans votre salon`}
+                            className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-red-200"
+                          >
+                            {r.absencesClient} absence{r.absencesClient > 1 ? "s" : ""}
+                          </span>
+                        )}
                       </p>
                       <p className="text-sm text-stone-600">{r.prestation} · {r.employe}</p>
                       {r.clientTelephone && (

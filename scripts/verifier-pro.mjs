@@ -78,7 +78,18 @@ const ok = (c) => (c ? '✅' : '❌')
  * donc avant, pour qu'une exécution interrompue ne bloque pas la suivante, et
  * après.
  */
-const NOM_SALON = process.env.TEST_SALON ?? 'Atlas Barber (essai)'
+/*
+ * Un nom qui n'est le préfixe d'aucun autre.
+ *
+ * « Atlas Barber (essai) » semblait clair et ne l'était pas : le jeu de
+ * démonstration comporte déjà « Atlas Barber », et le sélecteur de la suite
+ * retombe sur une correspondance partielle quand l'exacte manque. Elle
+ * ouvrait donc l'ancien salon, qui avait déjà ses prestations — et le
+ * catalogue des modèles, qui masque ce qui est déjà posé, paraissait
+ * incomplet. Le diagnostic évident, « les modèles barbier sont faux », était
+ * le mauvais.
+ */
+const NOM_SALON = process.env.TEST_SALON ?? "Barbier de l'Essai"
 const API = process.env.API_URL ?? 'http://localhost:8080'
 const KC = process.env.KC_URL ?? 'http://localhost:8081'
 

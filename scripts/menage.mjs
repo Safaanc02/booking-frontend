@@ -75,6 +75,32 @@ async function trouverSalons(api, jeton, noms) {
 }
 
 /**
+ * Les rendez-vous d'un salon de test, pour qu'il puisse ensuite disparaître.
+ *
+ * L'API n'expose pas « tous les rendez-vous d'un salon » à l'administration :
+ * on passe par l'agenda, sur une fenêtre large de part et d'autre du jour, ce
+ * qui couvre largement ce qu'une suite peut créer.
+ */
+async function effacerRendezVous(api, jeton, salonId, dit) {
+  const depart = new Date()
+  depart.setDate(depart.getDate() - 120)
+  const jour = depart.toISOString().slice(0, 10)
+
+  const r = await fetch(`${api}/api/pro/salons/${salonId}/agenda?date=${jour}&jours=400`,
+    { headers: { Authorization: `Bearer ${jeton}` } })
+  if (!r.ok) return
+
+  const rendezVous = await r.json().catch(() => [])
+  let effaces = 0
+  for (const rv of rendezVous) {
+    const d = await fetch(`${api}/api/reservations/${rv.id}`,
+      { method: 'DELETE', headers: { Authorization: `Bearer ${jeton}` } })
+    if (d.ok || d.status === 204) effaces += 1
+  }
+  if (effaces > 0) dit(`${effaces} rendez-vous de test effacé(s)`)
+}
+
+/**
  * Efface les salons et les comptes que les suites créent.
  *
  * `bavard` pour un appel de fin, où l'on veut voir ce qui a été rendu ;
@@ -90,6 +116,14 @@ export async function nettoyer({ api, kc, salons = [], emails = [], bavard = fal
 
   /* ---- Les salons ---- */
   for (const salon of await trouverSalons(api, jeton, salons)) {
+    /* Les rendez-vous d'abord, sinon le serveur refuse — et il a raison :
+       effacer un salon effacerait l'historique de ses clientes.
+       Ici les salons sont nommés explicitement par la suite appelante, donc
+       créés par elle : leurs rendez-vous sont des rendez-vous de test, et les
+       laisser derrière soi fait revenir le problème qu'on vient de régler,
+       un salon fantôme à la fois. */
+    await effacerRendezVous(api, jeton, salon.id, dit)
+
     const r = await fetch(`${api}/api/salons/${salon.id}`,
       { method: 'DELETE', headers: { Authorization: `Bearer ${jeton}` } })
     if (r.status === 204) dit(`salon « ${salon.nom} » effacé`)
