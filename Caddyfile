@@ -1,0 +1,87 @@
+# Point d'entrée unique de l'application partagée.
+#
+# Tout arrive sur une seule adresse : le site à la racine, l'API sous /api,
+# Keycloak sous /auth, la boîte aux lettres de test sous /courrier. Ce choix
+# n'est pas cosmétique — il supprime CORS, rend les URI de redirection du
+# realm portables (une URI relative suffit) et donne une seule adresse à
+# transmettre.
+#
+# Caddy termine le TLS tout seul quand on lui donne un nom de domaine ; derrière
+# un tunnel, le chiffrement est assuré en amont et l'on reste en clair ici.
+#
+# D'où l'adresse configurable. `:80` — la valeur par défaut — n'est qu'un port :
+# Caddy sert alors en clair et ne demande aucun certificat. Renseignez
+# ADRESSE_SITE avec un nom d'hôte et il en obtient un auprès de Let's Encrypt,
+# sans rien d'autre à faire.
+#
+# Ce n'est pas un confort. `keycloak-js` signe sa demande d'autorisation avec
+# PKCE, qui passe par `crypto.subtle` — et les navigateurs ne l'exposent que
+# dans un contexte sécurisé. Servie en clair sur autre chose que localhost,
+# l'application se charge, et le bouton Connexion ne fait rien : « Web Crypto
+# API is not available ». Le HTTPS n'est donc pas une finition, c'est ce qui
+# rend la connexion possible.
+#
+# Sans nom de domaine, sslip.io en fournit un : 51.170.135.94.sslip.io résout
+# vers 51.170.135.94, et Let's Encrypt délivre pour ce nom-là.
+
+{
+	admin off
+}
+
+{$ADRESSE_SITE::80} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	# Keycloak est configuré avec KC_HTTP_RELATIVE_PATH=/auth : le préfixe
+	# lui est donc transmis tel quel, sans être retiré au passage.
+	handle /auth/* {
+		reverse_proxy keycloak:8080
+	}
+
+	# Routes facultatives, ajoutées par montage.
+	#
+	# La boîte aux lettres de test se branche ainsi : docker-compose.demo.yml
+	# monte le fragment qui l'expose sous /courrier. Sans ce montage, la route
+	# n'existe pas du tout — elle n'est pas seulement fermée.
+	#
+	# C'est voulu : cette boîte contient les liens d'invitation des gérants,
+	# donc quiconque y accède prend la main sur un compte professionnel. Une
+	# route qu'on peut oublier de fermer finit par rester ouverte ; celle-ci
+	# demande un geste pour exister.
+	#
+	# Le joker rend l'import facultatif : Caddy valide la configuration avec
+	# ou sans fichier correspondant.
+	import /etc/caddy/optionnel-*.caddy
+
+	# Le site. try_files renvoie index.html pour toute adresse qui ne
+	# correspond à aucun fichier : le routage se fait dans le navigateur, et
+	# un lien d'annulation reçu par e-mail arrive toujours en accès direct.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+# Sonde de santé, sur un port interne jamais publié.
+#
+# Elle ne peut pas interroger le site lui-même : dès qu'il porte un nom, Caddy
+# redirige le port 80 vers HTTPS, et la sonde suivait la redirection jusqu'à
+# une poignée de main TLS pour un nom qui n'était pas le sien. Le conteneur
+# était marqué « unhealthy » pendant que le site répondait parfaitement — le
+# genre de faux signal qui fait ignorer une vraie panne, et qui bloque un
+# redéploiement le jour où l'on attend la santé des conteneurs.
+#
+# Une adresse réduite à un port ne demande aucun certificat et ne redirige
+# rien : elle répond, donc Caddy est debout et sa configuration est valide.
+:2020 {
+	respond 204
+}

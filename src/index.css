@@ -1,68 +1,168 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/*
+ * Fondations visuelles.
+ *
+ * Les polices sont servies par l'application, non par un service tiers : un
+ * appel à des polices hébergées ailleurs transmet l'adresse IP de chaque
+ * visiteur à l'étranger, ce qui n'est pas rien pour un produit marocain
+ * soumis à la loi 09-08. C'est aussi plus rapide — pas de résolution DNS ni
+ * de connexion supplémentaire.
+ *
+ * Inter était déjà déclarée dans les jetons, mais n'avait jamais été chargée :
+ * tout le site s'affichait dans la police du système, différente d'une machine
+ * à l'autre. Le choix typographique était donc accidentel.
+ */
+@import "tailwindcss";
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/*
+ * Déclarations écrites à la main plutôt que l'import global du paquet.
+ *
+ * Celui-ci embarquait cyrillique, grec et vietnamien : 95 Ko qu'aucun
+ * visiteur marocain ne lira jamais, sur un marché qui se consulte largement
+ * en 4G. La plage ci-dessous est le sous-ensemble « latin » de Google, qui
+ * couvre le français en entier — œ compris, en U+0152-0153 — ainsi que
+ * l'apostrophe typographique.
+ *
+ * Variante « standard » pour Fraunces : graisse et taille optique, les deux
+ * axes que le CSS pilote nativement. Le fichier « full » y ajoute SOFT et
+ * WONK pour 52 Ko de plus — un adoucissement d'empattements que personne ne
+ * remarquera, au prix d'une demi-seconde sur une connexion mobile.
+ *
+ * font-display: swap — le texte s'affiche tout de suite dans la police de
+ * repli, puis bascule. Mieux vaut un titre provisoirement en Georgia qu'une
+ * page blanche.
+ */
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+@font-face {
+  font-family: "Fraunces Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/fraunces/files/fraunces-latin-standard-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
-a:hover {
-  color: #535bf2;
+
+@theme {
+  /* ---- La marque ----
+
+     Six couleurs données, une échelle complète. Cinq d'entre elles occupent un
+     cran exact — 200, 300, 500, 600, 700, 900 — et seuls le 400 et le 800 sont
+     interpolés entre leurs voisines, le 50 et le 100 étant l'abricot éclairci.
+     Rien n'est approché à l'œil : ce que la palette dit, l'échelle le dit.
+
+     Ce que chaque cran a le droit de porter, mesuré sur le fond ivoire :
+
+       200 abricot     1,61:1   aplat seulement, jamais de texte
+       300 saumon      2,10:1   aplat seulement
+       500 framboise   3,63:1   grand texte, jamais du corps de texte
+       600 grenat      6,34:1   liens, et boutons pleins (blanc dessus 6,48:1)
+       700 prune       8,23:1   survol, titres colorés
+       900 aubergine  13,26:1   panneaux sombres, texte appuyé
+
+     Le 500 est le piège de cette palette : c'est la couleur la plus vive, donc
+     celle qu'on veut mettre partout, et elle ne tient pas le corps de texte.
+     Les boutons prennent le 600. */
+  --color-brand-50:  #fff7f2;
+  --color-brand-100: #ffece1;
+  --color-brand-200: #ffbb94;
+  --color-brand-300: #fb9590;
+  --color-brand-400: #ea737d;
+  --color-brand-500: #dc586d;
+  --color-brand-600: #a33757;
+  --color-brand-700: #852e4e;
+  --color-brand-800: #662545;
+  --color-brand-900: #4c1d3d;
+
+  /* ---- Les bandeaux ----
+
+     La page alterne des bandes claires pour donner un rythme sans filet gris.
+     Elles étaient sauge et menthe, du temps où la palette portait du vert ;
+     celle-ci n'en a pas, et un vert survivant au milieu de prunes se lirait
+     comme un oubli.
+
+     Deux teintes de la même famille suffisent, prises aux deux bouts : l'une
+     tire vers l'abricot, l'autre vers la prune. Assez proches pour rester une
+     seule palette, assez distinctes pour que deux sections voisines ne se
+     confondent pas.
+
+     Chacune garde une nuance sombre, car aucune des deux ne porte de texte. */
+
+  /* Aube — le bout clair, côté abricot. */
+  --color-aube-50:  #fff6f0;
+  --color-aube-100: #ffe9dc;
+  --color-aube-200: #ffd2b8;
+  --color-aube-600: #b55f33;
+  --color-aube-700: #8e4a28;
+  --color-aube-800: #6b381e;
+
+  /* Vigne — le bout sombre, côté prune. */
+  --color-vigne-50:  #fdf4f7;
+  --color-vigne-100: #fae6ec;
+  --color-vigne-200: #f2c9d6;
+  --color-vigne-600: #a33757;
+  --color-vigne-700: #852e4e;
+  --color-vigne-800: #662545;
+
+  /* ---- Fonds ----
+     Un ivoire à peine teinté de la marque plutôt qu'un gris : le stone-50 de
+     Tailwind tire vers le froid, et c'est ce qui donnait cet air de gabarit
+     non fini. Le crème reste discret — une longue liste de résultats sur un
+     fond saturé fatigue avant la fin de la page. */
+  --color-ivoire: #fffaf7;
+  --color-sable:  #fff1ea;
+
+  /* ---- Texte ----
+     Un presque-noir tiré de l'aubergine et non du gris : 16:1 sur l'ivoire, et
+     il s'accorde aux prunes sans les salir. */
+  --color-encre: #35142b;
+
+  /* ---- Typographie ----
+     Deux familles, deux rôles. Fraunces porte les titres : ses formes douces
+     et son fort contraste donnent un caractère que la grotesque n'a pas, sans
+     tomber dans le faire-part de mariage. Inter porte tout le reste, où la
+     lisibilité passe avant l'allure — prix, horaires, formulaires. */
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-titre: "Fraunces Variable", "Fraunces", Georgia, serif;
+
+  /* Ombres teintées de la marque plutôt que de noir : une ombre noire sur un
+     fond ivoire se voit comme une salissure. */
+  --shadow-carte: 0 1px 2px 0 rgb(96 52 34 / 0.05), 0 4px 16px -4px rgb(96 52 34 / 0.09);
+  --shadow-carte-levee: 0 2px 4px 0 rgb(96 52 34 / 0.07), 0 12px 32px -8px rgb(96 52 34 / 0.15);
 }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  @apply bg-ivoire text-encre antialiased;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/*
+ * Les titres prennent la police d'affichage par défaut.
+ *
+ * Posé ici plutôt que répété sur chaque composant : un titre qui aurait
+ * oublié la classe se serait affiché en grotesque au milieu des autres, et
+ * ce genre d'écart ne se remarque qu'une fois en ligne.
+ *
+ */
+h1, h2, h3 {
+  font-family: var(--font-titre);
+  /* La taille optique suit la taille de rendu : Fraunces durcit ses
+     empattements aux petits corps et les affine aux grands, ce qui évite des
+     titres de section qui pèsent plus lourd que le titre de page. */
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
+/* Les chiffres des prix, horaires et notes s'alignent en colonne. */
+.tabular-nums { font-variant-numeric: tabular-nums; }

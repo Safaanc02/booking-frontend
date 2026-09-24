@@ -1,34 +1,69 @@
-import React, { useContext, useState } from "react";
-import { AuthContext } from "./AuthContext";
-import axios from "axios";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom"
+import AuthProvider from "./auth/AuthProvider"
+import Header from "./components/Header"
+import Accueil from "./pages/Home"
+import Results from "./pages/Results"
+import SalonDetails from "./pages/SalonDetails"
+import Reservation from "./pages/Reservation"
+import AnnulationParLien from "./pages/AnnulationParLien"
+import RequireRole from "./components/RequireRole"
+import ProDashboard from "./pages/pro/ProDashboard"
+import ProSalon from "./pages/pro/ProSalon"
+import MonPlanning from "./pages/pro/MonPlanning"
+import AdminSalons from "./pages/admin/AdminSalons"
+import Professionnels from "./pages/Professionnels"
+import Account from "./pages/Account"
+import MentionsLegales from "./pages/legal/MentionsLegales"
+import Conditions from "./pages/legal/Conditions"
+import Confidentialite from "./pages/legal/Confidentialite"
+import NotFound from "./pages/NotFound"
 
-function App() {
-  const { authenticated, token } = useContext(AuthContext);
-  const [message, setMessage] = useState("");
-
-  const callApi = async (url) => {
-    try {
-      const res = await axios.get(`http://localhost:8080${url}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setMessage(res.data);
-    } catch (err) {
-      setMessage("❌ Erreur: " + err.response?.status);
-    }
-  };
-
-  if (!authenticated) return <h2>🔐 Connexion en cours...</h2>;
-
+export default function App() {
   return (
-    <div>
-      <h1>Booking Frontend ✅</h1>
-     <button onClick={() => callApi("/api/public/hello")}>Public</button>
-     <button onClick={() => callApi("/api/user/hello")}>User</button>
-     <button onClick={() => callApi("/api/admin/hello")}>Admin</button>
-
-      <p>Réponse backend: {message}</p>
-    </div>
-  );
+    <AuthProvider>
+      <BrowserRouter>
+        <div className="flex min-h-screen flex-col">
+          {/* Rendu une fois pour toutes les routes : le logo et la navigation
+              sont donc sur chaque page, jusqu'à celle d'erreur. */}
+          <Header />
+          <main className="flex-1">
+            <Routes>
+              {/* La vitrine pour qui découvre, le tableau de bord pour qui revient. */}
+              <Route path="/" element={<Accueil />} />
+              <Route path="/recherche" element={<Results />} />
+              <Route path="/salon/:id" element={<SalonDetails />} />
+              <Route path="/salon/:id/reserver" element={<Reservation />} />
+              <Route path="/compte" element={<Account />} />
+              {/* Entrée des professionnels : une prise de contact, pas une inscription. */}
+              <Route path="/professionnels" element={<Professionnels />} />
+              {/* Accessible sans connexion : le lien signé fait office d'autorisation. */}
+              <Route path="/annuler" element={<AnnulationParLien />} />
+              <Route path="/pro" element={<RequireRole role="pro"><ProDashboard /></RequireRole>} />
+              {/* Accessible à tout membre d'équipe, pas seulement aux propriétaires. */}
+              <Route path="/mon-planning" element={<RequireRole role="pro"><MonPlanning /></RequireRole>} />
+              <Route path="/pro/salon/:id" element={<RequireRole role="pro"><ProSalon /></RequireRole>} />
+              <Route path="/admin" element={<RequireRole role="admin"><AdminSalons /></RequireRole>} />
+              <Route path="/mentions-legales" element={<MentionsLegales />} />
+              <Route path="/conditions" element={<Conditions />} />
+              <Route path="/confidentialite" element={<Confidentialite />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
+          <footer className="border-t border-stone-200 bg-white">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-stone-500">
+              <span>© {new Date().getFullYear()} DarZin</span>
+              <span className="flex gap-4">
+                <Link to="/professionnels" className="hover:text-stone-800">
+                  Vous êtes un salon ?
+                </Link>
+                <Link to="/mentions-legales" className="hover:text-stone-800">Mentions légales</Link>
+                <Link to="/conditions" className="hover:text-stone-800">Conditions</Link>
+                <Link to="/confidentialite" className="hover:text-stone-800">Données personnelles</Link>
+              </span>
+            </div>
+          </footer>
+        </div>
+      </BrowserRouter>
+    </AuthProvider>
+  )
 }
-
-export default App;
