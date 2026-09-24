@@ -39,21 +39,21 @@ const ARGS_SUP = (process.env.CHROME_ARGS ?? '')
 const COMPTES = [
   {
     role: 'admin',
-    identifiant: process.env.ADMIN_USER ?? 'admin@booking.ma',
+    identifiant: process.env.ADMIN_USER ?? 'admin@darzin.ma',
     motDePasse: process.env.ADMIN_PASS ?? 'admin',
     attendu: /à traiter en premier|rien n'attend/i,
     lien: '/admin',
   },
   {
     role: 'gérant',
-    identifiant: process.env.PRO_USER ?? 'pro1@booking.ma',
+    identifiant: process.env.PRO_USER ?? 'pro1@darzin.ma',
     motDePasse: process.env.PRO_PASS ?? 'pro1',
     attendu: /prochain rendez-vous|plus rien au programme|aucun salon/i,
     lien: '/pro',
   },
   {
     role: 'cliente',
-    identifiant: process.env.CLIENT_USER ?? 'client1@booking.ma',
+    identifiant: process.env.CLIENT_USER ?? 'client1@darzin.ma',
     motDePasse: process.env.CLIENT_PASS ?? 'client1',
     attendu: /aujourd'hui|demain|aucun rendez-vous à venir|\d{1,2} \w+/i,
     lien: '/recherche',

@@ -48,9 +48,9 @@ const PG = process.env.PG_CONTENEUR ?? 'booking-postgres'
 const ZONE = 'Africa/Casablanca'
 
 const COMPTES = {
-  admin: [process.env.ADMIN_USER ?? 'admin@booking.ma', process.env.ADMIN_PASS ?? 'admin'],
-  pro: [process.env.PRO_USER ?? 'pro1@booking.ma', process.env.PRO_PASS ?? 'pro1'],
-  client: [process.env.CLIENT_USER ?? 'client1@booking.ma', process.env.CLIENT_PASS ?? 'client1'],
+  admin: [process.env.ADMIN_USER ?? 'admin@darzin.ma', process.env.ADMIN_PASS ?? 'admin'],
+  pro: [process.env.PRO_USER ?? 'pro1@darzin.ma', process.env.PRO_PASS ?? 'pro1'],
+  client: [process.env.CLIENT_USER ?? 'client1@darzin.ma', process.env.CLIENT_PASS ?? 'client1'],
 }
 
 let poses = 0
@@ -444,6 +444,6 @@ if (aFaire.includes('equipe')) await semerEquipe()
 console.log(`\n${poses} entrée${poses > 1 ? 's' : ''} posée${poses > 1 ? 's' : ''}`
   + (refuses ? `, ${refuses} refusée${refuses > 1 ? 's' : ''} (voir ci-dessus)` : ''))
 console.log('\nÀ essayer :')
-console.log('  client1@booking.ma / client1  — le prochain rendez-vous, et deux avis à donner')
-console.log('  pro1@booking.ma    / pro1     — la journée chez Atlas Barber')
-console.log('  admin@booking.ma   / admin    — la file des demandes')
+console.log('  client1@darzin.ma / client1  — le prochain rendez-vous, et deux avis à donner')
+console.log('  pro1@darzin.ma    / pro1     — la journée chez Atlas Barber')
+console.log('  admin@darzin.ma   / admin    — la file des demandes')

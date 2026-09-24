@@ -15,6 +15,7 @@
  *   npm run verifier:pro
  */
 import puppeteer from 'puppeteer-core'
+import { nettoyer } from './menage.mjs'
 import zlib from 'node:zlib'
 
 const CHROME = process.env.CHROME_PATH
@@ -34,6 +35,19 @@ const CHROME = process.env.CHROME_PATH
  */
 const BASE = process.env.BASE_URL ?? 'http://localhost:5173'
 const IDENTIFIANT = process.env.TEST_PRO ?? 'pro1'
+/*
+ * Le domaine des comptes de démonstration, tel que le realm le déclare.
+ *
+ * Il était écrit « booking.ma » en dur ici pendant que le realm disait
+ * « darzin.ma ». Le référencement créait donc un SECOND compte, le salon lui
+ * appartenait, et la suite se connectait avec l'autre : « le gérant ne trouve
+ * pas son salon ». On cherche un bogue de permissions pendant une heure, et
+ * il n'y en a pas — il y a deux comptes.
+ *
+ * Accessoirement, booking.ma appartient à Booking.com depuis 2012 : ce n'est
+ * pas un domaine dont nous pouvons nous servir, même pour un test.
+ */
+const DOMAINE = process.env.TEST_DOMAINE ?? 'darzin.ma'
 const MOT_DE_PASSE = process.env.TEST_PRO_PASSWORD ?? 'pro1'
 /**
  * Arguments supplémentaires pour le navigateur.
@@ -51,7 +65,20 @@ const MOT_DE_PASSE = process.env.TEST_PRO_PASSWORD ?? 'pro1'
 const ARGS_SUP = (process.env.CHROME_ARGS ?? '')
   .match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)?.map((a) => a.replace(/["']/g, '')) ?? []
 const ok = (c) => (c ? '✅' : '❌')
-const NOM_SALON = `Atlas Barber ${Date.now().toString().slice(-5)}`
+/*
+ * Un nom fixe, et non horodaté.
+ *
+ * L'horodatage servait à pouvoir relancer la suite sans buter sur un nom déjà
+ * pris. Le contournement coûtait plus cher que le problème : chaque exécution
+ * laissait un salon de plus dans le catalogue public, et au bout de quelques
+ * dizaines la page de recherche annonçait des chiffres avec lesquels on ne
+ * pilote rien — et un catalogue que personne ne peut montrer.
+ *
+ * Une suite doit rendre la base telle qu'elle l'a trouvée. Le ménage passe
+ * donc avant, pour qu'une exécution interrompue ne bloque pas la suivante, et
+ * après.
+ */
+const NOM_SALON = process.env.TEST_SALON ?? 'Atlas Barber (essai)'
 const API = process.env.API_URL ?? 'http://localhost:8080'
 const KC = process.env.KC_URL ?? 'http://localhost:8081'
 
@@ -86,7 +113,7 @@ const referencer = async () => {
         delaiAnnulationHeures: 24,
       },
       proprietaire: {
-        prenom: 'Karim', nom: 'Benali', email: `${IDENTIFIANT}@booking.ma`,
+        prenom: 'Karim', nom: 'Benali', email: `${IDENTIFIANT}@${DOMAINE}`,
         telephone: '0655443322',
       },
       validerImmediatement: false,
@@ -96,6 +123,9 @@ const referencer = async () => {
   if (!r.ok) throw new Error(`référencement impossible : ${r.status} ${JSON.stringify(corps)}`)
   return corps
 }
+
+/* Précaution : une exécution interrompue a pu laisser le salon en place. */
+await nettoyer({ api: API, kc: KC, salons: [NOM_SALON] })
 
 const reference = await referencer()
 console.log('─── Préparation ────────────────────────────────────')
@@ -655,4 +685,12 @@ if (reseau.length > 0) {
 }
 
 await browser.close()
+
+/* Et l'on rend la base telle qu'on l'a trouvée. Le salon d'essai a des
+   rendez-vous : le serveur refusera de l'effacer, et c'est justement ce qu'on
+   attend de lui — effacer un salon effacerait l'historique de ses clientes.
+   Le ménage le signale et passe. */
+console.log('\n─── Ménage ─────────────────────────────────────────')
+await nettoyer({ api: API, kc: KC, salons: [NOM_SALON], bavard: true })
+
 process.exit(erreurs.length === 0 ? 0 : 1)
