@@ -21,6 +21,23 @@ ENV VITE_API_URL="" \
     VITE_KEYCLOAK_CLIENT_ID="booking-app"
 RUN npm run build
 
+# salon.html : la copie d'index.html servie sous /salon/*, avec une inclusion
+# que Caddy résout à chaque requête — les balises de partage de la fiche
+# demandée (voir le Caddyfile). Le <title> statique est retiré, le fragment
+# apporte le sien ; la description statique aussi, pour la même raison.
+#
+# Faite ici et non dans le dépôt : les noms des ressources changent à chaque
+# construction, et salon.html doit les porter exactement comme index.html.
+RUN node -e '\
+  const fs = require("fs"); \
+  let h = fs.readFileSync("dist/index.html", "utf8"); \
+  h = h.replace(/<title>[^<]*<\/title>\s*/, "").replace(/<meta name="description"[^>]*>\s*/, ""); \
+  const inc = "{{ $id := index (splitList \"/\" .Req.URL.Path) 2 }}{{ httpInclude (printf \"/api/public/salons/%s/og\" $id) }}"; \
+  h = h.replace("<head>", "<head>\n    " + inc); \
+  fs.writeFileSync("dist/salon.html", h); \
+  console.log("salon.html écrit"); \
+'
+
 # ---- Service -------------------------------------------------------
 FROM caddy:2-alpine
 COPY Caddyfile /etc/caddy/Caddyfile

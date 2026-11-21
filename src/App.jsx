@@ -1,24 +1,45 @@
+import { lazy, Suspense, useEffect } from "react"
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom"
 import AuthProvider from "./auth/AuthProvider"
 import Header from "./components/Header"
+import BarreBasse from "./components/BarreBasse"
+import BarriereErreur from "./components/BarriereErreur"
+import Loader from "./components/Loader"
+import { appliquerSoiree } from "./lib/maroc"
 import Accueil from "./pages/Home"
 import Results from "./pages/Results"
 import SalonDetails from "./pages/SalonDetails"
 import Reservation from "./pages/Reservation"
 import AnnulationParLien from "./pages/AnnulationParLien"
 import RequireRole from "./components/RequireRole"
-import ProDashboard from "./pages/pro/ProDashboard"
-import ProSalon from "./pages/pro/ProSalon"
-import MonPlanning from "./pages/pro/MonPlanning"
-import AdminSalons from "./pages/admin/AdminSalons"
 import Professionnels from "./pages/Professionnels"
 import Account from "./pages/Account"
-import MentionsLegales from "./pages/legal/MentionsLegales"
-import Conditions from "./pages/legal/Conditions"
-import Confidentialite from "./pages/legal/Confidentialite"
 import NotFound from "./pages/NotFound"
 
+/*
+ * Les espaces pro, admin et les textes légaux se chargent à la demande.
+ *
+ * Un seul paquet de 492 Ko partait chez chaque visiteuse : l'agenda des
+ * gérants, la modération des avis et le référencement, pour chercher un
+ * coiffeur. Ces pages arrivent maintenant quand on y va, et pas avant.
+ */
+const ProDashboard = lazy(() => import("./pages/pro/ProDashboard"))
+const ProSalon = lazy(() => import("./pages/pro/ProSalon"))
+const MonPlanning = lazy(() => import("./pages/pro/MonPlanning"))
+const AdminSalons = lazy(() => import("./pages/admin/AdminSalons"))
+const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"))
+const Conditions = lazy(() => import("./pages/legal/Conditions"))
+const Confidentialite = lazy(() => import("./pages/legal/Confidentialite"))
+
 export default function App() {
+  /* La soirée : posée à l'arrivée, puis vérifiée chaque minute — 20 h tombe
+     pendant qu'une page est ouverte. */
+  useEffect(() => {
+    appliquerSoiree()
+    const t = setInterval(appliquerSoiree, 60000)
+    return () => clearInterval(t)
+  }, [])
+
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -26,7 +47,9 @@ export default function App() {
           {/* Rendu une fois pour toutes les routes : le logo et la navigation
               sont donc sur chaque page, jusqu'à celle d'erreur. */}
           <Header />
-          <main className="flex-1">
+          <main className="flex-1 pb-16 md:pb-0">
+            <BarriereErreur>
+            <Suspense fallback={<Loader />}>
             <Routes>
               {/* La vitrine pour qui découvre, le tableau de bord pour qui revient. */}
               <Route path="/" element={<Accueil />} />
@@ -48,7 +71,10 @@ export default function App() {
               <Route path="/confidentialite" element={<Confidentialite />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
+            </BarriereErreur>
           </main>
+          <BarreBasse />
           <footer className="border-t border-stone-200 bg-white">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-stone-500">
               <span>© {new Date().getFullYear()} DarZin</span>

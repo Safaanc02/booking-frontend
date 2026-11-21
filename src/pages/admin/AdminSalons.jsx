@@ -72,7 +72,10 @@ export default function AdminSalons() {
         Des demandes reçues jusqu'à la mise en ligne des salons.
       </p>
 
-      <nav className="mt-5 flex gap-1 border-b border-stone-200">
+      {/* Sept onglets sur 390 px faisaient une page de 639 px de large : la
+          rangée défile désormais, et le dégradé à droite dit qu'il y a une
+          suite. */}
+      <nav className="onglets-defilants mt-5 flex gap-1 overflow-x-auto border-b border-stone-200">
         {ONGLETS.map(([cle, libelle]) => (
           <button
             key={cle}
@@ -82,7 +85,7 @@ export default function AdminSalons() {
               if (cle === "REFERENCER") setDepuis(null)
               setOnglet(cle)
             }}
-            className={`border-b-2 px-4 py-2.5 text-sm transition ${
+            className={`shrink-0 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm transition ${
               onglet === cle
                 ? "border-brand-600 font-semibold text-brand-700"
                 : "border-transparent text-stone-500 hover:text-stone-800"

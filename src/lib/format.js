@@ -104,3 +104,6 @@ export const urlApi = (chemin) => {
   const base = import.meta.env.VITE_API_URL ?? ""
   return `${base}${chemin}`
 }
+
+/** « 19:00 » depuis « 19:00:00 » — l'API rend les heures d'ouverture avec les secondes. */
+export const heureCourte = (h) => (h ? String(h).slice(0, 5) : "")

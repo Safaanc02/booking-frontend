@@ -435,12 +435,20 @@ function Vitrine() {
               </p>
             )}
 
+            {/* Les compteurs n'apparaissent qu'à partir de dix salons : « 4
+                salons dans 3 villes » disait à un gérant qu'il serait le
+                cinquième. En dessous, on nomme les villes, on ne compte pas. */}
             {reseau.total > 0 && (
               <p className="mt-5 text-sm text-stone-500">
-                <strong className="font-semibold text-stone-900">{reseau.total}</strong>
-                {reseau.total > 1 ? " salons" : " salon"} dans{" "}
-                <strong className="font-semibold text-stone-900">{reseau.villes.length}</strong>
-                {reseau.villes.length > 1 ? " villes" : " ville"}
+                {reseau.total >= 10 ? (
+                  <>
+                    <strong className="font-semibold text-stone-900">{reseau.total}</strong> salons dans{" "}
+                    <strong className="font-semibold text-stone-900">{reseau.villes.length}</strong>
+                    {reseau.villes.length > 1 ? " villes" : " ville"}
+                  </>
+                ) : (
+                  <>Présents à <strong className="font-semibold text-stone-900">{reseau.villes.join(", ")}</strong></>
+                )}
                 <span aria-hidden className="mx-3 inline-block h-3 w-px translate-y-px bg-stone-300" />
                 Gratuit, sans compte pour chercher
               </p>
@@ -511,7 +519,7 @@ function Vitrine() {
                     <span className="font-titre text-2xl font-semibold text-stone-900 decoration-aube-600 decoration-2 underline-offset-[6px] transition group-hover:text-aube-800 group-hover:underline sm:text-3xl">
                       {ville}
                     </span>
-                    {reseau.complet && (
+                    {reseau.complet && parVille(ville) >= 5 && (
                       <span className="text-sm tabular-nums text-stone-400 transition group-hover:text-aube-700">
                         {parVille(ville)}
                       </span>

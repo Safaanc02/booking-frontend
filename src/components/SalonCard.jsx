@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { prix as formatPrix, quandLibre } from "../lib/format"
+import { prix as formatPrix, quandLibre, heureCourte } from "../lib/format"
 import { libelleMetier, metiersDuSalon } from "../lib/metiers"
 import Couverture from "./Couverture"
 import { Boussole } from "./Glyphes"
@@ -33,6 +33,8 @@ import { distanceLisible } from "../lib/geolocalisation"
  * La ville disparaît quand la recherche la filtre déjà : dans une liste
  * « Casablanca », l'étiquette Casablanca sur chaque carte n'apprend rien.
  */
+const JOURS = { 1: "lundi", 2: "mardi", 3: "mercredi", 4: "jeudi", 5: "vendredi", 6: "samedi", 7: "dimanche" }
+
 export default function SalonCard({ salon, villeFiltree = false, metierFiltre = null, dispo = null }) {
   const note = salon.noteMoyenne && salon.nombreAvis
   /*
@@ -66,7 +68,7 @@ export default function SalonCard({ salon, villeFiltree = false, metierFiltre = 
       to={`/salon/${salon.id}`}
       className="group block overflow-hidden rounded-2xl bg-white shadow-carte ring-1 ring-stone-200/70 transition duration-200 hover:-translate-y-0.5 hover:shadow-carte-levee hover:ring-brand-300"
     >
-      <Couverture salon={salon} hauteur="h-28">
+      <Couverture salon={salon} hauteur="h-28" taille="vignette">
         <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-stone-900 shadow-sm backdrop-blur">
           {note ? (
             <>
@@ -122,10 +124,25 @@ export default function SalonCard({ salon, villeFiltree = false, metierFiltre = 
           {lieu && <span className="text-stone-400"> · {lieu}</span>}
         </p>
 
+        {/* « Ouvert là ? » — la question qu'on se pose devant une carte, et qui
+            restait sans réponse. Calculé par le serveur à l'heure de
+            Casablanca ; rien n'est dit tant que le salon n'a pas saisi ses
+            horaires, plutôt qu'un « fermé » par défaut qui ferait fuir. */}
+        {salon.ouvertMaintenant === true && (
+          <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+            <span aria-hidden className="pouls inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Ouvert · ferme à <span className="heure">{heureCourte(salon.fermeA)}</span>
+          </p>
+        )}
+        {salon.ouvertMaintenant === false && salon.ouvreA && (
+          <p className="mt-2 text-sm text-stone-500">
+            Fermé · ouvre {salon.ouvreJour ? JOURS[salon.ouvreJour] + " " : ""}à <span className="heure">{heureCourte(salon.ouvreA)}</span>
+          </p>
+        )}
         {libre && (
           /* Entre l'adresse et le prix : on lit un salon dans cet ordre —
              qui, où, quand, combien. */
-          <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+          <p className={`flex items-center gap-1.5 text-sm font-medium text-emerald-700 ${salon.ouvertMaintenant == null ? "mt-2" : "mt-1"}`}>
             <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
             Libre {libre}
           </p>

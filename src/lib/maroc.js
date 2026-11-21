@@ -48,3 +48,38 @@ export const aujourdhui = () =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: ZONE, year: "numeric", month: "2-digit", day: "2-digit",
   }).format(new Date())
+
+/* ------------------------------------------------------------------ */
+/* La soirée                                                          */
+/* ------------------------------------------------------------------ */
+
+/** Après 20 h et avant 7 h, à Casablanca : le site passe en soirée. */
+export const estLaSoiree = (h = heureCasablanca()) => h >= 20 || h < 7
+
+const CLE_SOIREE = "darzin.soiree"
+
+/** La préférence de la personne : "auto" (défaut), "jour" ou "soiree". */
+export const preferenceSoiree = () => {
+  try { return localStorage.getItem(CLE_SOIREE) || "auto" } catch { return "auto" }
+}
+
+export const choisirSoiree = (valeur) => {
+  try { localStorage.setItem(CLE_SOIREE, valeur) } catch { /* navigation privée : on applique sans retenir */ }
+  return appliquerSoiree()
+}
+
+/**
+ * Pose ou retire la classe « soiree » sur <html>.
+ *
+ * Les jetons de couleur font le reste : aucun composant n'a de variante
+ * sombre à écrire. Rappelée toutes les minutes, parce que 20 h arrive pendant
+ * qu'une page est ouverte.
+ */
+export const appliquerSoiree = () => {
+  const pref = preferenceSoiree()
+  const sombre = pref === "soiree" || (pref === "auto" && estLaSoiree())
+  document.documentElement.classList.toggle("soiree", sombre)
+  const meta = document.querySelector('meta[name="theme-color"]')
+  if (meta) meta.setAttribute("content", sombre ? "#2a1024" : "#a33757")
+  return sombre
+}

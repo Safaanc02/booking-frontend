@@ -68,6 +68,21 @@ export default function Results() {
   const rayon = Number(params.get("rayon")) || RAYON_DEFAUT
 
   const [etat, setEtat] = useState({ statut: "chargement", data: null, erreur: null })
+  /*
+   * Les pages suivantes s'ajoutent à la première.
+   *
+   * La recherche n'avait aucune pagination : vingt résultats, et le
+   * vingt-et-unième salon référencé à Casablanca devenait invisible pour tout
+   * le monde, sans message. « Afficher plus » cumule les pages, et le total
+   * dit combien il en reste.
+   */
+  const [suite, setSuite] = useState({ salons: [], page: 0, enCours: false })
+
+  /* Filtres et tri, côté navigateur : ils portent sur ce que la page sait
+     déjà — note, prix d'entrée, « ouvert là », premier créneau — sans
+     nouvel aller-retour. Dans l'URL, pour qu'un lien les garde. */
+  const filtres = (params.get("f") ?? "").split(",").filter(Boolean)
+  const tri = params.get("tri") ?? ""
   /**
    * Premier créneau libre de chaque salon de la page.
    *
@@ -86,6 +101,7 @@ export default function Results() {
       })
       .then((data) => {
         setEtat({ statut: "ok", data, erreur: null })
+        setSuite({ salons: [], page: 0, enCours: false })
         const ids = (data.content ?? []).map((s) => s.id)
         setDispos({})
         publicApi.premiersCreneaux(ids).then(setDispos).catch(() => setDispos({}))
@@ -95,8 +111,48 @@ export default function Results() {
 
   useEffect(charger, [charger])
 
-  const salons = etat.data?.content ?? []
-  const total = etat.data?.totalElements ?? salons.length
+  const chargerSuite = () => {
+    const page = suite.page + 1
+    setSuite((x) => ({ ...x, enCours: true }))
+    publicApi
+      .rechercherSalons({ q, ville, metier, page, ...(situee ? { lat, lng, rayon } : {}) })
+      .then((data) => {
+        const nouveaux = data.content ?? []
+        setSuite((x) => ({ salons: [...x.salons, ...nouveaux], page, enCours: false }))
+        publicApi.premiersCreneaux(nouveaux.map((s) => s.id))
+          .then((d) => setDispos((x) => ({ ...x, ...d }))).catch(() => {})
+      })
+      .catch(() => setSuite((x) => ({ ...x, enCours: false })))
+  }
+
+  const tous = [...(etat.data?.content ?? []), ...suite.salons]
+  const total = etat.data?.totalElements ?? tous.length
+  const resteAVoir = Math.max(0, total - tous.length)
+
+  const basculerFiltre = (cle) => {
+    const suivant = new URLSearchParams(params)
+    const actifs = filtres.includes(cle) ? filtres.filter((f) => f !== cle) : [...filtres, cle]
+    if (actifs.length) suivant.set("f", actifs.join(",")); else suivant.delete("f")
+    setParams(suivant, { replace: true })
+  }
+  const changerTri = (valeur) => {
+    const suivant = new URLSearchParams(params)
+    if (valeur) suivant.set("tri", valeur); else suivant.delete("tri")
+    setParams(suivant, { replace: true })
+  }
+
+  const aujourdhuiIso = new Date().toISOString().slice(0, 10)
+  const salons = tous
+    .filter((s) => !filtres.includes("ouvert") || s.ouvertMaintenant === true)
+    .filter((s) => !filtres.includes("aujourdhui") || dispos[s.id]?.date === aujourdhuiIso)
+    .filter((s) => !filtres.includes("note") || (s.noteMoyenne != null && Number(s.noteMoyenne) >= 4.5))
+    .filter((s) => !filtres.includes("prix") || (s.prixMin != null && Number(s.prixMin) <= 150))
+    .sort((a, b) => {
+      if (tri === "note") return (Number(b.noteMoyenne) || 0) - (Number(a.noteMoyenne) || 0)
+      if (tri === "prix") return (Number(a.prixMin) || 1e9) - (Number(b.prixMin) || 1e9)
+      if (tri === "distance") return (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9)
+      return 0
+    })
 
   const elargir = () => {
     const suivant = new URLSearchParams(params)
@@ -137,10 +193,12 @@ export default function Results() {
         {etat.statut === "ok" && (
           <>
             <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-3">
+              {/* Le compte n'apparaît qu'à partir de dix : « 4 salons » en
+                  titre dit à un gérant qu'il serait le cinquième. */}
               <h1 className="flex flex-wrap items-baseline gap-x-2 text-2xl font-bold tracking-tight text-stone-900">
                 {total === 0
                   ? "Aucun salon"
-                  : `${total} salon${total > 1 ? "s" : ""}`}
+                  : total >= 10 ? `${total} salons` : "Salons"}
                 {situee && <span className="font-normal text-stone-500">autour de vous</span>}
                 {ville && !situee && <span className="font-normal text-stone-500">à {ville}</span>}
               </h1>
@@ -166,6 +224,48 @@ export default function Results() {
                     )
                   })}
               </div>
+            </div>
+
+            {/* Filtres utiles et tri. Une liste sans « ouvert maintenant »,
+                sans « disponible aujourd'hui », sans note ni prix n'est pas
+                une recherche : c'est un annuaire. */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {[
+                ["ouvert", "Ouvert maintenant"],
+                ["aujourdhui", "Libre aujourd'hui"],
+                ["note", "Note ≥ 4,5"],
+                ["prix", "Dès 150 MAD ou moins"],
+              ].map(([cle, libelle]) => {
+                const actif = filtres.includes(cle)
+                return (
+                  <button
+                    key={cle}
+                    type="button"
+                    onClick={() => basculerFiltre(cle)}
+                    aria-pressed={actif}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                      actif
+                        ? "border-stone-900 bg-stone-900 text-white"
+                        : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                    }`}
+                  >
+                    {libelle}
+                  </button>
+                )
+              })}
+              <label className="ml-auto flex items-center gap-2 text-xs text-stone-500">
+                Trier
+                <select
+                  value={tri}
+                  onChange={(e) => changerTri(e.target.value)}
+                  className="rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-xs text-stone-700"
+                >
+                  <option value="">Pertinence</option>
+                  <option value="note">Mieux notés</option>
+                  <option value="prix">Prix d'entrée</option>
+                  {situee && <option value="distance">Les plus proches</option>}
+                </select>
+              </label>
             </div>
 
             {situee && (
@@ -240,17 +340,42 @@ export default function Results() {
                 </div>
               </div>
             ) : (
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {salons.map((s) => (
-                  <SalonCard
-                    key={s.id}
-                    salon={s}
-                    villeFiltree={Boolean(ville)}
-                    metierFiltre={metier || null}
-                    dispo={dispos[s.id] ?? null}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {salons.map((s) => (
+                    <SalonCard
+                      key={s.id}
+                      salon={s}
+                      villeFiltree={Boolean(ville)}
+                      metierFiltre={metier || null}
+                      dispo={dispos[s.id] ?? null}
+                    />
+                  ))}
+                </div>
+                {salons.length === 0 && tous.length > 0 && (
+                  <p className="mt-6 rounded-2xl bg-white p-6 text-center text-sm text-stone-500 ring-1 ring-stone-200/70">
+                    Aucun salon ne correspond à ces filtres.{" "}
+                    <button type="button" onClick={() => { const n = new URLSearchParams(params); n.delete("f"); setParams(n, { replace: true }) }} className="font-medium text-brand-700 underline underline-offset-4">
+                      Les retirer
+                    </button>
+                  </p>
+                )}
+                {resteAVoir > 0 && (
+                  <div className="mt-8 flex flex-col items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={chargerSuite}
+                      disabled={suite.enCours}
+                      className="rounded-xl border border-stone-300 bg-white px-6 py-3 text-sm font-semibold text-stone-800 transition hover:bg-stone-50 disabled:opacity-60"
+                    >
+                      {suite.enCours ? "Chargement…" : `Afficher plus de salons`}
+                    </button>
+                    <span className="text-xs text-stone-400">
+                      {tous.length} sur {total}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}

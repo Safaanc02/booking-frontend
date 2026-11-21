@@ -90,6 +90,8 @@ export const publicApi = {
       .then((r) => r.data),
 
   villes: () => client.get("/api/public/villes").then((r) => r.data),
+  /** Les horaires d'ouverture d'un salon, tels qu'il les a saisis. */
+  horaires: (salonId) => client.get(`/api/public/salons/${salonId}/horaires`).then((r) => r.data),
 
   avis: (salonId, { page = 0, size = 10 } = {}) =>
     client.get(`/api/public/salons/${salonId}/avis`, { params: { page, size } }).then((r) => r.data),

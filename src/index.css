@@ -73,6 +73,32 @@
      Le 500 est le piège de cette palette : c'est la couleur la plus vive, donc
      celle qu'on veut mettre partout, et elle ne tient pas le corps de texte.
      Les boutons prennent le 600. */
+  /* ---- Les neutres du carnet ----
+
+     Le site était construit sur le gris froid par défaut de Tailwind :
+     714 usages de « stone » contre 230 de la palette. La framboise n'était
+     qu'un accent posé sur un gabarit gris, et c'est ce qui donnait au site
+     l'air d'un site Tailwind propre plutôt que de DarZin.
+
+     L'échelle « stone » est redéfinie ici, cran par cran, par des neutres
+     tirés vers la prune — ceux du papier d'un carnet de rendez-vous. Toutes
+     les classes existantes la suivent sans qu'une seule ait à changer, et
+     « stone-900 » cesse d'être un noir froid pour devenir l'encre.
+
+     Les contrastes sur ivoire : 500 à 5,2:1 (texte courant), 700 à 9,1:1,
+     900 à 15,8:1. */
+  --color-stone-50:  #fdf7f4;
+  --color-stone-100: #f8eee9;
+  --color-stone-200: #ead9d3;
+  --color-stone-300: #d9c0b9;
+  --color-stone-400: #a98a95;
+  --color-stone-500: #7d5c6d;
+  --color-stone-600: #6b4a5f;
+  --color-stone-700: #553a4b;
+  --color-stone-800: #42263a;
+  --color-stone-900: #35142b;
+  --color-stone-950: #1d0b18;
+
   --color-brand-50:  #fff7f2;
   --color-brand-100: #ffece1;
   --color-brand-200: #ffbb94;
@@ -148,6 +174,80 @@ body {
 }
 
 /*
+ * La soirée.
+ *
+ * Après 20 h à Casablanca, le site passe dans l'aubergine de l'écran de
+ * connexion. Les salons dorment ; leur agenda, non — et c'est le thème que
+ * voit la cliente qui réserve dans son lit à 23 h.
+ *
+ * Obtenue en redéfinissant les jetons que les classes utilisent déjà : les
+ * neutres s'inversent, l'ivoire devient la nuit, le blanc des cartes devient
+ * la prune. Aucun composant n'a de variante sombre à écrire. Les boutons de
+ * marque gardent leur blanc : c'est la framboise qui change de fond, pas de
+ * sens.
+ *
+ * Posée par lib/maroc.js sur <html>, à l'heure du Maroc, et débrayable par
+ * la personne — sa préférence est gardée dans le navigateur.
+ */
+html.soiree {
+  color-scheme: dark;
+  --color-ivoire: #1d0b18;
+  --color-sable:  #2a1024;
+  --color-encre:  #fff1ea;
+  --color-white:  #2a1024;
+  --color-stone-50:  #2a1024;
+  --color-stone-100: #341529;
+  --color-stone-200: #4a2a3e;
+  --color-stone-300: #5e3a50;
+  --color-stone-400: #a98a95;
+  --color-stone-500: #c9a9b7;
+  --color-stone-600: #d9b8c6;
+  --color-stone-700: #e8d2db;
+  --color-stone-800: #f4e6ec;
+  --color-stone-900: #fff1ea;
+  --color-stone-950: #fffaf7;
+  --color-brand-50:  #3a1a30;
+  --color-brand-100: #4a2240;
+  --color-aube-50:   #2e1a16;
+  --color-aube-100:  #3d2219;
+  --color-aube-200:  #5a3425;
+  --color-vigne-50:  #2a1024;
+  --color-vigne-100: #341529;
+  --color-vigne-200: #4a2a3e;
+  --color-emerald-50: #1f3a2e;
+  --color-emerald-700: #9ad6b8;
+  --color-amber-50: #433a14;
+  --color-red-50: #4a1a22;
+  --color-red-700: #ff9aa6;
+  --color-sky-50: #243540;
+  --color-sky-700: #a9c6d8;
+  --shadow-carte: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 4px 16px -4px rgb(0 0 0 / 0.4);
+  --shadow-carte-levee: 0 2px 4px 0 rgb(0 0 0 / 0.35), 0 12px 32px -8px rgb(0 0 0 / 0.5);
+}
+
+/*
+ * Prêt pour l'arabe.
+ *
+ * Fraunces et Inter ne couvrent que le latin. Le jour où une page passe en
+ * arabe, le texte retomberait dans la police du système et le site changerait
+ * de visage selon le téléphone. La paire est choisie maintenant, et le sens
+ * d'écriture avec : « Readex Pro » lit bien aux petits corps.
+ */
+:lang(ar) { font-family: "Readex Pro", "Inter Variable", system-ui, sans-serif; letter-spacing: 0; }
+:lang(ar) h1, :lang(ar) h2, :lang(ar) h3 { font-family: "Readex Pro", system-ui, sans-serif; }
+
+/*
+ * Fraunces, poussée.
+ *
+ * Elle était là et sous-employée. Aux grands corps, la taille optique maximale
+ * affine les empattements ; l'italique porte les adresses ; les chiffres
+ * tabulaires alignent les heures. C'est elle qui porte l'identité.
+ */
+h1 { font-variation-settings: "opsz" 144; }
+.adresse-italique { font-family: var(--font-titre); font-style: italic; font-variation-settings: "opsz" 60; }
+.heure { font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+
+/*
  * Les titres prennent la police d'affichage par défaut.
  *
  * Posé ici plutôt que répété sur chaque composant : un titre qui aurait
@@ -166,3 +266,25 @@ h1, h2, h3 {
 
 /* Les chiffres des prix, horaires et notes s'alignent en colonne. */
 .tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* Le point « ouvert » bat doucement : c'est un salon en activité, pas une
+   étiquette. Immobile pour qui a demandé que rien ne bouge. */
+@keyframes pouls { 0% { box-shadow: 0 0 0 0 rgb(16 185 129 / 0.45); } 100% { box-shadow: 0 0 0 8px rgb(16 185 129 / 0); } }
+.pouls { animation: pouls 2.2s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .pouls { animation: none; } }
+
+/*
+ * Une rangée d'onglets qui défile, et qui le dit.
+ *
+ * Les ascenseurs sont cachés (ils doublent la bordure et tremblent au
+ * survol) ; à leur place, un voile dégradé sur le bord droit annonce qu'il y
+ * a une suite. Il disparaît quand on est au bout.
+ */
+.onglets-defilants {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  padding-right: 40px;
+}
+.onglets-defilants::-webkit-scrollbar { display: none; }

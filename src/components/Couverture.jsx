@@ -16,7 +16,7 @@ const GLYPHES = {
   ESTHETIQUE: Esthetique, SPA: Hammam,
 }
 
-export default function Couverture({ salon, hauteur = "h-32", className = "", children }) {
+export default function Couverture({ salon, hauteur = "h-32", className = "", children, taille = "pleine", alt = "" }) {
   const { sombre, clair } = couleursSalon(salon)
   const Glyphe = GLYPHES[salon?.categorie] ?? Coiffure
 
@@ -28,7 +28,10 @@ export default function Couverture({ salon, hauteur = "h-32", className = "", ch
    * jamais — répertoire vidé par un redéploiement, réseau coupé. Une carte au
    * cadre gris et cassé ferait plus de tort qu'une carte sans photo.
    */
-  const photo = urlApi(salon?.photos?.[0])
+  /* Les cartes demandent la vignette (480 px) : une liste en affiche vingt,
+     et aucune n'a besoin de 1600 px. La fiche prend la pleine taille. */
+  const brute = salon?.photos?.[0]
+  const photo = brute ? urlApi(brute) + (taille === "vignette" ? "?taille=vignette" : "") : null
   const [photoCassee, setPhotoCassee] = useState(false)
 
   return (
@@ -39,10 +42,10 @@ export default function Couverture({ salon, hauteur = "h-32", className = "", ch
       {photo && !photoCassee ? (
         <img
           src={photo}
-          alt=""
-          // Décorative : le nom du salon est écrit juste en dessous, et le
-          // lire deux fois de suite à un lecteur d'écran n'apprend rien.
-          aria-hidden
+          // Décorative dans une carte (le nom est écrit juste en dessous) ;
+          // sur la fiche, l'appelant passe le nom du salon et la photo le dit.
+          alt={alt}
+          aria-hidden={alt ? undefined : true}
           loading="lazy"
           decoding="async"
           onError={() => setPhotoCassee(true)}

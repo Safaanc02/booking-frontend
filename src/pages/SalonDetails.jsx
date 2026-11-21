@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react"
 import { Link, useParams } from "react-router-dom"
 import { publicApi } from "../api/bookingApi"
-import { prix, duree, telephone, urlApi } from "../lib/format"
+import { prix, duree, telephone, urlApi, heureCourte } from "../lib/format"
 import Loader, { ErrorState } from "../components/Loader"
 import ListeAvis from "../components/ListeAvis"
 import Couverture, { Initiales } from "../components/Couverture"
-import { Horloge, Etiquette } from "../components/Glyphes"
+import { Horloge, Etiquette, Boussole } from "../components/Glyphes"
 import { libelleMetier, metiersDuSalon } from "../lib/metiers"
 
 /**
@@ -74,7 +74,7 @@ export default function SalonDetails() {
       {/* ---------------------------------------------------------------- */}
       {/* Bandeau                                                          */}
       {/* ---------------------------------------------------------------- */}
-      <Couverture salon={salon} hauteur="h-56 sm:h-64">
+      <Couverture salon={salon} hauteur="h-56 sm:h-64" alt={`Photo de ${salon.nom}`}>
         {/* Voile sombre en bas : le nom se lit quelle que soit la teinte
             tirée, y compris sur les palettes claires de l'onglerie. */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
@@ -97,11 +97,22 @@ export default function SalonDetails() {
               {salon.nom}
             </h1>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/90">
-              <span>
+              <span className="adresse-italique text-[17px]">
                 {salon.adresse}
                 {salon.quartier && ` · ${salon.quartier}`}
                 {salon.ville && ` · ${salon.ville}`}
               </span>
+              {salon.ouvertMaintenant === true && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-0.5 font-semibold text-emerald-700">
+                  <span aria-hidden className="pouls inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Ouvert · ferme à <span className="heure">{heureCourte(salon.fermeA)}</span>
+                </span>
+              )}
+              {salon.ouvertMaintenant === false && salon.ouvreA && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-0.5 font-medium text-stone-700">
+                  Fermé · ouvre {salon.ouvreJour ? JOURS[salon.ouvreJour] + " " : ""}à <span className="heure">{heureCourte(salon.ouvreA)}</span>
+                </span>
+              )}
               {note && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-0.5 font-semibold text-stone-900">
                   <span className="text-amber-500">★</span>
@@ -223,7 +234,7 @@ export default function SalonDetails() {
                             </span>
                             <Link
                               to={`/salon/${salon.id}/reserver?prestationId=${p.id}`}
-                              className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition group-hover:bg-brand-600"
+                              className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
                             >
                               Réserver
                             </Link>
@@ -297,14 +308,55 @@ export default function SalonDetails() {
                     </dd>
                   </div>
                 </div>
+                {salon.horaires?.length > 0 && (
+                  <div className="flex items-start gap-2.5">
+                    <Horloge className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                    <div className="min-w-0 flex-1">
+                      <dt className="font-medium text-stone-800">Horaires</dt>
+                      <dd className="mt-1">
+                        <Horaires plages={salon.horaires} />
+                      </dd>
+                    </div>
+                  </div>
+                )}
+                {(salon.latitude != null || salon.adresse) && (
+                  <div className="flex items-start gap-2.5">
+                    <Boussole className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                    <div>
+                      <dt className="font-medium text-stone-800">Y aller</dt>
+                      <dd className="text-stone-600">
+                        <a
+                          href={salon.latitude != null
+                            ? `https://www.google.com/maps/dir/?api=1&destination=${salon.latitude},${salon.longitude}`
+                            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([salon.adresse, salon.quartier, salon.ville].filter(Boolean).join(", "))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-brand-700 hover:underline"
+                        >
+                          Itinéraire
+                        </a>
+                      </dd>
+                    </div>
+                  </div>
+                )}
                 {salon.telephone && (
                   <div className="flex items-start gap-2.5">
                     <Horloge className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
                     <div>
                       <dt className="font-medium text-stone-800">Une question ?</dt>
-                      <dd className="text-stone-600">
+                      <dd className="flex flex-wrap items-center gap-x-3 gap-y-1 text-stone-600">
                         <a href={`tel:${salon.telephone}`} className="hover:underline">
                           {telephone(salon.telephone)}
+                        </a>
+                        {/* WhatsApp : au Maroc, c'est par là qu'on écrit à un
+                            salon. Le numéro au format international, sans le 0. */}
+                        <a
+                          href={`https://wa.me/${whatsapp(salon.telephone)}?text=${encodeURIComponent("Bonjour, je vous écris depuis DarZin.")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                        >
+                          WhatsApp
                         </a>
                       </dd>
                     </div>
@@ -346,5 +398,41 @@ export default function SalonDetails() {
         </div>
       </div>
     </div>
+  )
+}
+
+const JOURS = { 1: "lundi", 2: "mardi", 3: "mercredi", 4: "jeudi", 5: "vendredi", 6: "samedi", 7: "dimanche" }
+const JOURS_COURTS = ["", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+
+/** Le numéro au format international de WhatsApp : 0661… → 212661… */
+function whatsapp(numero) {
+  const chiffres = String(numero).replace(/\D/g, "")
+  return chiffres.startsWith("212") ? chiffres : "212" + chiffres.replace(/^0/, "")
+}
+
+/**
+ * Les horaires, jour par jour.
+ *
+ * Les jours sans plage sont écrits « fermé » : un jour absent de la liste se
+ * lit comme un oubli, un jour marqué fermé comme une information. Le jour
+ * courant est mis en avant — c'est celui qu'on vérifie.
+ */
+function Horaires({ plages }) {
+  const parJour = {}
+  for (const h of plages) (parJour[h.jourSemaine] ??= []).push(h)
+  const aujourdhui = ((new Date().getDay() + 6) % 7) + 1
+  return (
+    <ul className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
+      {[1, 2, 3, 4, 5, 6, 7].map((j) => (
+        <li key={j} className={`contents ${j === aujourdhui ? "font-semibold text-stone-900" : "text-stone-600"}`}>
+          <span>{JOURS_COURTS[j]}</span>
+          <span className="heure">
+            {parJour[j]
+              ? parJour[j].map((h) => `${heureCourte(h.heureDebut)}–${heureCourte(h.heureFin)}`).join(", ")
+              : <span className="text-stone-400">fermé</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
   )
 }

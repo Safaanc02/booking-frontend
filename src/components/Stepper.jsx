@@ -34,7 +34,10 @@ export default function Stepper({ etapes, courante, onAller }) {
               >
                 {franchie ? "✓" : i + 1}
               </span>
-              <span className="hidden sm:inline">{libelle}</span>
+              {/* Le libellé de l'étape courante reste lisible sur téléphone :
+                  « 1 › 2 › 3 › 4 » sans un mot ne disait ni où l'on est, ni
+                  ce qui vient. Les autres restent des numéros, par place. */}
+              <span className={active ? "inline" : "hidden sm:inline"}>{libelle}</span>
             </button>
             {i < etapes.length - 1 && <span aria-hidden className="text-stone-300">›</span>}
           </li>

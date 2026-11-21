@@ -78,7 +78,11 @@ export default function ProSalon() {
         <p className="text-sm text-stone-500">{salon.ville}</p>
       </div>
 
-      <nav className="mt-5 flex gap-1 overflow-x-auto border-b border-stone-200">
+      {/* Neuf onglets, quatre visibles sur téléphone : la rangée défilait
+          déjà, mais rien ne le disait, et Horaires, Clients, Congés, Avis et
+          Fiche n'existaient pas pour un gérant au téléphone. Le dégradé à
+          droite annonce la suite ; les ascenseurs restent cachés. */}
+      <nav className="onglets-defilants mt-5 flex gap-1 overflow-x-auto border-b border-stone-200">
         {ONGLETS.map(([cle, libelle]) => (
           <button
             key={cle}

@@ -25,7 +25,7 @@ const OUTILS = ["Carnet papier", "Agenda téléphone", "Un autre logiciel", "Rie
 const ETAPES = ["Votre établissement", "Votre activité", "Vous contacter"]
 
 const VIDE = {
-  metiers: [], nomEtablissement: "", ville: "", quartier: "", specialite: "",
+  metiers: [], nomEtablissement: "", ville: "", quartier: "", specialite: "", siteWeb: "",
   anciennete: "", nombreCollaborateurs: "", proprietaireLocal: "", outilActuel: "",
   prenom: "", nom: "", telephone: "", email: "", ice: "", message: "",
 }
@@ -73,6 +73,7 @@ export default function Professionnels() {
     setEnvoi({ enCours: true, erreur: null })
     proprietairesApi
       .demanderDemo({
+        siteWeb: form.siteWeb,
         nomEtablissement: form.nomEtablissement,
         // Le premier coché est le métier principal : l'ordre des cases est
         // celui dans lequel le prospect a pensé son activité.
@@ -200,6 +201,16 @@ export default function Professionnels() {
               </div>
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                {/* Pot de miel. Invisible et hors tabulation : seul un robot
+                    qui remplit tout ce qu'il trouve y écrit, et le serveur
+                    jette alors la demande en silence. */}
+                <div aria-hidden="true" style={{ position: "absolute", left: "-10000px", width: 1, height: 1, overflow: "hidden" }}>
+                  <label>
+                    Site web
+                    <input type="text" name="siteWeb" tabIndex={-1} autoComplete="off"
+                           value={form.siteWeb} onChange={maj("siteWeb")} />
+                  </label>
+                </div>
                 <Champ label="Nom de l'établissement" value={form.nomEtablissement}
                        onChange={maj("nomEtablissement")} erreur={champs.nomEtablissement}
                        className="sm:col-span-2" required />

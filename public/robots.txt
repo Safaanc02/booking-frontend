@@ -1,0 +1,11 @@
+# DarZin — ce qui peut être indexé.
+User-agent: *
+Allow: /
+Disallow: /compte
+Disallow: /pro
+Disallow: /mon-planning
+Disallow: /admin
+Disallow: /annuler
+Disallow: /auth/
+Disallow: /api/
+Sitemap: /sitemap.xml
