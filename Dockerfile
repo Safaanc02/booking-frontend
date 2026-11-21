@@ -32,7 +32,7 @@ RUN node -e '\
   const fs = require("fs"); \
   let h = fs.readFileSync("dist/index.html", "utf8"); \
   h = h.replace(/<title>[^<]*<\/title>\s*/, "").replace(/<meta name="description"[^>]*>\s*/, ""); \
-  const inc = "{{ $id := index (splitList \"/\" .Req.URL.Path) 2 }}{{ httpInclude (printf \"/api/public/salons/%s/og\" $id) }}"; \
+  const inc = "{{ $id := index (splitList \"/\" .OriginalReq.URL.Path) 2 }}{{ httpInclude (printf \"/api/public/salons/%s/og\" $id) }}"; \
   h = h.replace("<head>", "<head>\n    " + inc); \
   fs.writeFileSync("dist/salon.html", h); \
   console.log("salon.html écrit"); \
