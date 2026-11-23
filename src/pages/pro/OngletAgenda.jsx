@@ -243,11 +243,10 @@ function Colonnes({ jour, rendezVous, equipe, plages, ouvert, onOuvrir, onMarque
           </div>
         ))}
 
-        {/* heures */}
+        {/* heures — la première étiquette ne remonte pas : centrée sur sa
+            ligne, elle passait à moitié sous l'en-tête des colonnes. */}
         <div className="relative" style={{ height: hauteur }}>
           {lignes.map((m) => (
-            {/* La première étiquette ne remonte pas : centrée sur sa ligne, elle
-                passait à moitié sous l'en-tête des colonnes. */}
             <div key={m} className={`absolute right-2 text-[11px] tabular-nums text-stone-400 ${m === debutJour ? "translate-y-0.5" : "-translate-y-1/2"}`} style={{ top: ((m - debutJour) / PAS_MIN) * HAUTEUR_PAS }}>
               {m % 60 === 0 ? `${String(m / 60).padStart(2, "0")}:00` : ""}
             </div>
