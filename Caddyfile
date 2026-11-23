@@ -1,0 +1,156 @@
+# Point d'entrée unique de l'application partagée.
+#
+# Tout arrive sur une seule adresse : le site à la racine, l'API sous /api,
+# Keycloak sous /auth, la boîte aux lettres de test sous /courrier. Ce choix
+# n'est pas cosmétique — il supprime CORS, rend les URI de redirection du
+# realm portables (une URI relative suffit) et donne une seule adresse à
+# transmettre.
+#
+# Caddy termine le TLS tout seul quand on lui donne un nom de domaine ; derrière
+# un tunnel, le chiffrement est assuré en amont et l'on reste en clair ici.
+#
+# D'où l'adresse configurable. `:80` — la valeur par défaut — n'est qu'un port :
+# Caddy sert alors en clair et ne demande aucun certificat. Renseignez
+# ADRESSE_SITE avec un nom d'hôte et il en obtient un auprès de Let's Encrypt,
+# sans rien d'autre à faire.
+#
+# Ce n'est pas un confort. `keycloak-js` signe sa demande d'autorisation avec
+# PKCE, qui passe par `crypto.subtle` — et les navigateurs ne l'exposent que
+# dans un contexte sécurisé. Servie en clair sur autre chose que localhost,
+# l'application se charge, et le bouton Connexion ne fait rien : « Web Crypto
+# API is not available ». Le HTTPS n'est donc pas une finition, c'est ce qui
+# rend la connexion possible.
+#
+# Sans nom de domaine, sslip.io en fournit un : 51.170.135.94.sslip.io résout
+# vers 51.170.135.94, et Let's Encrypt délivre pour ce nom-là.
+
+{
+	admin off
+}
+
+# La politique de contenu, pour l'application seulement.
+#
+# Pas sur /auth : Keycloak pose la sienne, et deux politiques s'additionnent
+# en restrictions — ses scripts en ligne, dont la carte d'imports du gabarit,
+# auraient été bloqués. Pas sur /api : des JSON n'exécutent rien.
+#
+# `style-src 'unsafe-inline'` : React pose des styles en attribut (les
+# dégradés de couverture). `img-src blob:` : l'aperçu d'une photo avant envoi.
+# `frame-ancestors 'self'` : la vérification silencieuse de session de
+# Keycloak ouvre une page du site dans un cadre, depuis le site lui-même.
+(csp) {
+	header {
+		Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; font-src 'self'; frame-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+		X-Frame-Options "SAMEORIGIN"
+	}
+}
+
+{$ADRESSE_SITE::80} {
+	encode zstd gzip
+
+	# En-têtes de sécurité, valables partout.
+	#
+	# Le site en était dépourvu : ni HSTS, ni politique de référent. Un premier
+	# accès en http:// pouvait être intercepté avant la redirection.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	# Keycloak est configuré avec KC_HTTP_RELATIVE_PATH=/auth : le préfixe
+	# lui est donc transmis tel quel, sans être retiré au passage.
+	handle /auth/* {
+		reverse_proxy keycloak:8080
+	}
+
+	# Le plan du site vient du catalogue, pas d'un fichier.
+	handle /sitemap.xml {
+		rewrite * /api/public/sitemap.xml
+		reverse_proxy api:8080
+	}
+
+	# Les fiches de salon reçoivent leurs balises de partage.
+	#
+	# Le site est une application : index.html est le même pour toutes les
+	# pages, et un lien de salon partagé sur WhatsApp n'avait ni image ni
+	# titre. Sous /salon/*, on sert une copie d'index.html qui contient une
+	# inclusion : Caddy va chercher le fragment de balises auprès de l'API —
+	# par une sous-requête interne, sans sortir du serveur — et l'écrit dans
+	# l'en-tête avant de répondre. Le navigateur, lui, reçoit l'application
+	# comme d'habitude.
+	handle /salon/* {
+		import csp
+		root * /srv
+		rewrite * /salon.html
+		templates
+		file_server
+	}
+
+	# Routes facultatives, ajoutées par montage.
+	#
+	# La boîte aux lettres de test se branche ainsi : docker-compose.demo.yml
+	# monte le fragment qui l'expose sous /courrier. Sans ce montage, la route
+	# n'existe pas du tout — elle n'est pas seulement fermée.
+	#
+	# C'est voulu : cette boîte contient les liens d'invitation des gérants,
+	# donc quiconque y accède prend la main sur un compte professionnel. Une
+	# route qu'on peut oublier de fermer finit par rester ouverte ; celle-ci
+	# demande un geste pour exister.
+	#
+	# Le joker rend l'import facultatif : Caddy valide la configuration avec
+	# ou sans fichier correspondant.
+	import /etc/caddy/optionnel-*.caddy
+
+	# Un fichier qui n'existe pas est un 404, pas la page d'accueil.
+	#
+	# try_files renvoyait index.html pour TOUT chemin inconnu : /robots.txt,
+	# /sitemap.xml et /n-importe-quoi répondaient 200 avec du HTML. Google
+	# recevait une page en guise de plan du site et indexait des adresses
+	# fausses comme valides ; les vraies 404 étaient invisibles.
+	#
+	# Un chemin qui porte une extension de fichier est servi tel quel — ou
+	# refusé. Le repli vers l'application ne vaut que pour les routes, qui n'en
+	# ont pas : /salon/1, /compte, /annuler?token=…
+	handle /silent-check-sso.html {
+		root * /srv
+		file_server
+	}
+	@fichier path_regexp \.[a-zA-Z0-9]{1,8}$
+	handle @fichier {
+		root * /srv
+		file_server
+	}
+	handle {
+		import csp
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+# Sonde de santé, sur un port interne jamais publié.
+#
+# Elle ne peut pas interroger le site lui-même : dès qu'il porte un nom, Caddy
+# redirige le port 80 vers HTTPS, et la sonde suivait la redirection jusqu'à
+# une poignée de main TLS pour un nom qui n'était pas le sien. Le conteneur
+# était marqué « unhealthy » pendant que le site répondait parfaitement — le
+# genre de faux signal qui fait ignorer une vraie panne, et qui bloque un
+# redéploiement le jour où l'on attend la santé des conteneurs.
+#
+# Une adresse réduite à un port ne demande aucun certificat et ne redirige
+# rien : elle répond, donc Caddy est debout et sa configuration est valide.
+:2020 {
+	respond 204
+}

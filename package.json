@@ -7,16 +7,31 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verifier:accueil": "node scripts/verifier-accueil.mjs",
+    "verifier:tunnel": "node scripts/verifier-tunnel.mjs",
+    "verifier:pro": "node scripts/verifier-pro.mjs",
+    "verifier:avis": "node scripts/verifier-avis.mjs",
+    "verifier:referencement": "node scripts/verifier-referencement.mjs",
+    "verifier:demande-demo": "node scripts/verifier-demande-demo.mjs",
+    "verifier:proximite": "node scripts/verifier-proximite.mjs",
+    "verifier:inscription": "node scripts/verifier-inscription.mjs",
+    "verifier:tableau": "node scripts/verifier-tableau.mjs",
+    "verifier:cloisonnement": "node scripts/verifier-cloisonnement.mjs",
+    "semer:demo": "node scripts/semer-demo.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
     "axios": "^1.11.0",
     "keycloak-js": "^26.2.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
@@ -24,6 +39,8 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "puppeteer-core": "^25.9.0",
+    "tailwindcss": "^4.3.3",
     "vite": "^7.1.2"
   }
 }
