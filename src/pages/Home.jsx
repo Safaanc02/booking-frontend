@@ -15,6 +15,62 @@ import { sessionConnue } from "../auth/sessionConnue"
 import Tableau from "./Tableau"
 import Loader from "../components/Loader"
 
+
+/**
+ * Les cinq familles de prestations.
+ *
+ * Le pictogramme est désigné par une clé et non par le composant lui-même :
+ * la règle no-unused-vars du projet ne suit pas les identifiants employés en
+ * JSX, et un composant rangé dans un tableau passerait pour inutilisé.
+ */
+/**
+ * Les cinq familles de prestations.
+ *
+ * Le détail cite ce qu'on y fait vraiment — beldi, rhassoul, henné — plutôt
+ * qu'un vocabulaire de catalogue générique.
+ */
+const METIERS = [
+  { cle: "COIFFURE",   libelle: "Coiffure",     detail: "Coupe, couleur, coiffage" },
+  { cle: "BARBIER",    libelle: "Barbier",      detail: "Coupe homme, barbe" },
+  { cle: "ONGLERIE",   libelle: "Onglerie",     detail: "Manucure, henné" },
+  { cle: "ESTHETIQUE", libelle: "Esthétique",   detail: "Soins, épilation" },
+  { cle: "SPA",        libelle: "Hammam & spa", detail: "Beldi, gommage, rhassoul" },
+]
+
+const GLYPHES = {
+  COIFFURE: Coiffure, BARBIER: Barbier, ONGLERIE: Onglerie,
+  ESTHETIQUE: Esthetique, SPA: Hammam,
+  horloge: Horloge, etiquette: Etiquette, rappel: Rappel,
+}
+
+/**
+ * Dégradés des tuiles de métier.
+ *
+ * Mêmes teintes que l'identité des salons : un visiteur qui clique sur la
+ * tuile bordeaux « Coiffure » retrouve des cartes bordeaux dans les
+ * résultats. La cohérence n'est pas décorative, elle confirme le geste.
+ */
+
+
+/** Ce que la réservation en ligne change, du point de vue du client. */
+const PROMESSES = [
+  { glyphe: "horloge", titre: "À toute heure",
+    texte: "Le salon dort, son agenda non. Vous réservez à minuit comme à midi." },
+  { glyphe: "etiquette", titre: "Prix affichés",
+    texte: "Durée et tarif de chaque prestation, avant de choisir votre créneau." },
+  { glyphe: "rappel", titre: "Rappel la veille",
+    texte: "Un message avant le rendez-vous, et un lien pour annuler si besoin." },
+]
+
+/**
+ * Bandeau d'accroche, réglé sur l'heure de Casablanca.
+ *
+ * La promesse du produit est de pouvoir réserver quand le salon ne peut pas
+ * répondre. L'énoncer en général n'engage à rien ; l'énoncer à deux heures du
+ * matin, avec l'heure affichée, la démontre. Le fuseau est celui de
+ * l'application, pas celui du visiteur : un Marocain en voyage réserve à
+ * l'heure de son salon.
+ */
 function Accroche() {
   const [maintenant, setMaintenant] = useState(() => ({
     heure: minuteCasablanca(), h: heureCasablanca(),
@@ -90,6 +146,7 @@ function TitreSection({ titre, complement, lien, libelleLien }) {
  *   3. l'absence de créneaux se dit, et se distingue d'un serveur muet — un
  *      agenda plein est une information, une panne en est une autre.
  */
+
 /*
  * Le titre qui vit la journée.
  *
