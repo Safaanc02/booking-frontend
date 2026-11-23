@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { proApi, publicApi } from "../../api/bookingApi"
-import { heureLocale, jourLong, isoDate, prix, telephone } from "../../lib/format"
+import { heureLocale, jourLong, isoDate, prix, telephone, heureCourte } from "../../lib/format"
 import Loader, { EmptyState, ErrorState } from "../../components/Loader"
 import { Champ } from "./ProDashboard"
 
@@ -19,6 +19,30 @@ export default function OngletAgenda({ salon }) {
   const [jour, setJour] = useState(isoDate(new Date()))
   const [etat, setEtat] = useState({ statut: "chargement", data: [], erreur: null })
   const [saisie, setSaisie] = useState(false)
+  /*
+   * Colonnes ou liste.
+   *
+   * Un gérant pense sa journée en colonnes horaires — une par praticien, les
+   * rendez-vous posés à leur heure, les trous visibles. C'est ce qu'il a sur
+   * le mur du salon, et c'est ce qu'on lui montre en démonstration. La liste
+   * reste pour le téléphone, où quatre colonnes ne tiendraient pas, et pour
+   * qui la préfère : le choix est gardé dans le navigateur.
+   */
+  const [vue, setVue] = useState(() => {
+    try { return localStorage.getItem("darzin.agenda.vue") || (window.innerWidth >= 768 ? "colonnes" : "liste") }
+    catch { return "liste" }
+  })
+  const choisirVue = (v) => { setVue(v); try { localStorage.setItem("darzin.agenda.vue", v) } catch { /* privé */ } }
+  const [equipe, setEquipe] = useState([])
+  const [plages, setPlages] = useState([])
+  const [ouvert, setOuvert] = useState(null) // le rendez-vous dont les actions sont dépliées
+
+  /* Les colonnes ont besoin de l'équipe et des horaires du salon : chargés
+     une fois, ils ne changent pas d'un jour à l'autre. */
+  useEffect(() => {
+    proApi.employes(salon.id).then((l) => setEquipe(l.filter((e) => e.actif !== false))).catch(() => setEquipe([]))
+    proApi.horaires(salon.id).then(setPlages).catch(() => setPlages([]))
+  }, [salon.id])
 
   const charger = useCallback(() => {
     setEtat({ statut: "chargement", data: [], erreur: null })
@@ -52,12 +76,22 @@ export default function OngletAgenda({ salon }) {
             className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50">→</button>
           <span className="ml-2 font-medium text-stone-800">{jourLong(jour)}</span>
         </div>
-        <button
-          onClick={() => setSaisie(!saisie)}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-        >
-          {saisie ? "Fermer" : "Rendez-vous par téléphone"}
-        </button>
+        <div className="flex items-center gap-2">
+          <div role="group" aria-label="Affichage" className="hidden overflow-hidden rounded-lg border border-stone-300 text-sm md:flex">
+            {[["colonnes", "Colonnes"], ["liste", "Liste"]].map(([v, l]) => (
+              <button key={v} type="button" onClick={() => choisirVue(v)} aria-pressed={vue === v}
+                className={`px-3 py-1.5 transition ${vue === v ? "bg-stone-900 text-white" : "text-stone-600 hover:bg-stone-50"}`}>
+                {l}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setSaisie(!saisie)}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+          >
+            {saisie ? "Fermer" : "Rendez-vous par téléphone"}
+          </button>
+        </div>
       </div>
 
       {saisie && (
@@ -71,7 +105,18 @@ export default function OngletAgenda({ salon }) {
       <div className="mt-5">
         {etat.statut === "chargement" && <Loader />}
         {etat.statut === "erreur" && <ErrorState erreur={etat.erreur} onRetry={charger} />}
-        {etat.statut === "ok" && (
+        {etat.statut === "ok" && vue === "colonnes" && equipe.length > 0 && (
+          <Colonnes
+            jour={jour}
+            rendezVous={etat.data}
+            equipe={equipe}
+            plages={plages}
+            ouvert={ouvert}
+            onOuvrir={setOuvert}
+            onMarquer={(id, statut) => { setOuvert(null); marquer(id, statut) }}
+          />
+        )}
+        {etat.statut === "ok" && (vue === "liste" || equipe.length === 0) && (
           etat.data.length === 0 ? (
             <EmptyState titre="Aucun rendez-vous ce jour-là">
               Les réservations en ligne apparaîtront ici automatiquement.
@@ -144,6 +189,123 @@ export default function OngletAgenda({ salon }) {
  * Indispensable : sans elle le salon tient deux agendas — le nôtre et son
  * carnet — et les créneaux pris par téléphone restent proposés en ligne.
  */
+/*
+ * La journée en colonnes.
+ *
+ * Une colonne par praticien, une ligne par demi-heure entre la première
+ * ouverture et la dernière fermeture du jour (9 h – 19 h à défaut
+ * d'horaires saisis). Chaque rendez-vous est un bloc posé à son heure, haut
+ * comme sa durée ; les plages hors ouverture sont hachurées ; un trait rouge
+ * marque l'heure qu'il est, quand c'est aujourd'hui.
+ *
+ * Les actions — honorée, absente, annuler — se déplient au clic sur le bloc,
+ * et non en permanence : quarante rendez-vous avec trois boutons chacun,
+ * c'est cent vingt boutons sur un écran.
+ */
+const PAS_MIN = 30
+const HAUTEUR_PAS = 44 // px par demi-heure
+
+function Colonnes({ jour, rendezVous, equipe, plages, ouvert, onOuvrir, onMarquer }) {
+  const jourIso = ((new Date(`${jour}T12:00:00`).getDay() + 6) % 7) + 1
+  const dujour = plages.filter((p) => p.jourSemaine === jourIso)
+  const minutes = (h) => { const [hh, mm] = String(h).split(":").map(Number); return hh * 60 + mm }
+  const debutJour = dujour.length ? Math.min(...dujour.map((p) => minutes(p.heureDebut))) : 9 * 60
+  const finJour = dujour.length ? Math.max(...dujour.map((p) => minutes(p.heureFin))) : 19 * 60
+  const lignes = []
+  for (let m = debutJour; m < finJour; m += PAS_MIN) lignes.push(m)
+  const hauteur = lignes.length * HAUTEUR_PAS
+
+  const local = (iso) => { const d = new Date(iso); return Number(new Intl.DateTimeFormat("fr-FR", { hour: "numeric", hour12: false, timeZone: "Africa/Casablanca" }).format(d).replace(/\D/g, "")) * 60 + d.getMinutes() }
+  const y = (iso) => ((local(iso) - debutJour) / PAS_MIN) * HAUTEUR_PAS
+
+  const aujourdhui = isoDate(new Date()) === jour
+  const maintenant = new Date()
+  const yMaintenant = aujourdhui ? ((Number(new Intl.DateTimeFormat("fr-FR", { hour: "numeric", hour12: false, timeZone: "Africa/Casablanca" }).format(maintenant).replace(/\D/g, "")) * 60 + maintenant.getMinutes() - debutJour) / PAS_MIN) * HAUTEUR_PAS : null
+
+  const TEINTES = {
+    CONFIRMEE: "bg-emerald-50 ring-emerald-300 text-emerald-900",
+    EN_ATTENTE: "bg-amber-50 ring-amber-300 text-amber-900",
+    HONOREE: "bg-sky-50 ring-sky-300 text-sky-900",
+    ABSENT: "bg-red-50 ring-red-300 text-red-900",
+    ANNULEE_CLIENT: "bg-stone-100 ring-stone-200 text-stone-400 line-through",
+    ANNULEE_SALON: "bg-stone-100 ring-stone-200 text-stone-400 line-through",
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-2xl bg-white ring-1 ring-stone-200">
+      <div className="grid min-w-[640px]" style={{ gridTemplateColumns: `56px repeat(${equipe.length}, minmax(150px, 1fr))` }}>
+        {/* en-têtes */}
+        <div className="sticky top-0 z-10 border-b border-stone-200 bg-white" />
+        {equipe.map((e) => (
+          <div key={e.id} className="sticky top-0 z-10 border-b border-l border-stone-200 bg-white px-3 py-2.5">
+            <p className="truncate text-sm font-semibold text-stone-900">{e.prenom} {e.nom}</p>
+            <p className="truncate text-xs text-stone-500">{e.titre || ""}</p>
+          </div>
+        ))}
+
+        {/* heures */}
+        <div className="relative" style={{ height: hauteur }}>
+          {lignes.map((m) => (
+            <div key={m} className="absolute right-2 -translate-y-1/2 text-[11px] tabular-nums text-stone-400" style={{ top: ((m - debutJour) / PAS_MIN) * HAUTEUR_PAS }}>
+              {m % 60 === 0 ? `${String(m / 60).padStart(2, "0")}:00` : ""}
+            </div>
+          ))}
+        </div>
+
+        {/* colonnes */}
+        {equipe.map((e) => {
+          const siens = rendezVous.filter((r) => r.employeId === e.id)
+          return (
+            <div key={e.id} className="relative border-l border-stone-200" style={{ height: hauteur }}>
+              {lignes.map((m) => (
+                <div key={m} className={`absolute inset-x-0 border-t ${m % 60 === 0 ? "border-stone-200" : "border-stone-100"}`} style={{ top: ((m - debutJour) / PAS_MIN) * HAUTEUR_PAS }} />
+              ))}
+              {yMaintenant != null && yMaintenant >= 0 && yMaintenant <= hauteur && (
+                <div className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-brand-500" style={{ top: yMaintenant }} />
+              )}
+              {siens.map((r) => {
+                const top = Math.max(0, y(r.debut))
+                const h = Math.max(HAUTEUR_PAS * 0.8, y(r.fin) - y(r.debut))
+                const deplie = ouvert === r.id
+                const modifiable = r.statut === "CONFIRMEE" || r.statut === "EN_ATTENTE"
+                return (
+                  <div key={r.id} className={`absolute inset-x-1 ${deplie ? "z-20" : "z-0"}`} style={{ top: top + 2, minHeight: h - 4 }}>
+                    <button
+                      type="button"
+                      onClick={() => onOuvrir(deplie ? null : r.id)}
+                      className={`block w-full rounded-lg px-2.5 py-1.5 text-left text-xs ring-1 transition hover:shadow-carte ${TEINTES[r.statut] ?? "bg-stone-50 ring-stone-200"}`}
+                      style={{ minHeight: h - 4 }}
+                    >
+                      <span className="block truncate font-semibold">{r.client}</span>
+                      <span className="block truncate">{r.prestation}</span>
+                      <span className="block tabular-nums opacity-70">{heureLocale(r.debut)}–{heureLocale(r.fin)}</span>
+                      {r.absencesClient > 0 && <span className="mt-0.5 inline-block rounded-full bg-red-100 px-1.5 text-[10px] font-semibold text-red-700">{r.absencesClient} abs.</span>}
+                    </button>
+                    {deplie && (
+                      <div className="mt-1 rounded-lg bg-white p-2.5 text-xs shadow-carte-levee ring-1 ring-stone-200">
+                        {r.clientTelephone && <p className="text-stone-600">{telephone(r.clientTelephone)}</p>}
+                        {r.noteClient && <p className="mt-1 italic text-stone-500">« {r.noteClient} »</p>}
+                        <p className="mt-1 font-semibold text-stone-900">{prix(r.prix)}</p>
+                        {modifiable && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <button onClick={() => onMarquer(r.id, "HONOREE")} className="rounded-md bg-emerald-600 px-2 py-1 font-semibold text-white">Honorée</button>
+                            <button onClick={() => onMarquer(r.id, "ABSENT")} className="rounded-md bg-red-600 px-2 py-1 font-semibold text-white">Absente</button>
+                            <button onClick={() => onMarquer(r.id, "ANNULEE_SALON")} className="rounded-md border border-stone-300 px-2 py-1 text-stone-700">Annuler</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function SaisieTelephone({ salon, jour, onEnregistre }) {
   const prestations = salon.prestations ?? []
   const [form, setForm] = useState({

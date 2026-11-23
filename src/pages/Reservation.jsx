@@ -106,7 +106,20 @@ export default function Reservation() {
         const trouvee = data.prestations?.find((x) => x.id === pid)
         if (trouvee) {
           setPrestation(trouvee)
-          setEtape(1)
+          /*
+           * « Reprendre le même rendez-vous » : la prestation ET le praticien
+           * arrivent dans l'adresse, depuis l'historique. On repose la cliente
+           * directement devant les créneaux — c'est tout ce qui lui reste à
+           * choisir. Si le praticien a quitté le salon, l'étape 2 le dira et
+           * elle en choisira un autre.
+           */
+          const eid = Number(params.get("employeId"))
+          if (eid && data.employes?.some((e) => e.id === eid)) {
+            setEmployeId(eid)
+            setEtape(2)
+          } else {
+            setEtape(1)
+          }
         }
       })
       .catch((erreur) => setSalon({ statut: "erreur", data: null, erreur }))

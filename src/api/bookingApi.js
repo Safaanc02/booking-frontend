@@ -278,3 +278,10 @@ export const adminApi = {
   modererAvis: (avisId, statut) =>
     client.patch(`/api/admin/avis/${avisId}/statut`, null, { params: { statut } }).then((r) => r.data),
 }
+
+/** Les salons que la personne connectée garde. Une liste d'identifiants : le site a déjà les fiches. */
+export const favorisApi = {
+  mesSalons: () => client.get("/api/favoris").then((r) => r.data),
+  garder: (salonId) => client.put(`/api/favoris/${salonId}`).then((r) => r.data),
+  retirer: (salonId) => client.delete(`/api/favoris/${salonId}`).then((r) => r.data),
+}

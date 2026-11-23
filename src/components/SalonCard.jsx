@@ -2,6 +2,7 @@ import { Link } from "react-router-dom"
 import { prix as formatPrix, quandLibre, heureCourte } from "../lib/format"
 import { libelleMetier, metiersDuSalon } from "../lib/metiers"
 import Couverture from "./Couverture"
+import Coeur from "./Coeur"
 import { Boussole } from "./Glyphes"
 import { distanceLisible } from "../lib/geolocalisation"
 
@@ -82,6 +83,7 @@ export default function SalonCard({ salon, villeFiltree = false, metierFiltre = 
             <span className="font-medium text-stone-500">Nouveau</span>
           )}
         </span>
+        <Coeur salonId={salon.id} taille="h-8 w-8" className={`absolute top-2.5 ${distance ? "right-24" : "right-3"}`} />
         {distance && (
           /* En haut à droite, en miroir de la note : dans une liste classée
              par distance, c'est l'information qu'on relit de carte en carte,

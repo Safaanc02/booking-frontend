@@ -5,6 +5,7 @@ import { prix, duree, telephone, urlApi, heureCourte } from "../lib/format"
 import Loader, { ErrorState } from "../components/Loader"
 import ListeAvis from "../components/ListeAvis"
 import Couverture, { Initiales } from "../components/Couverture"
+import Coeur from "../components/Coeur"
 import { Horloge, Etiquette, Boussole } from "../components/Glyphes"
 import { libelleMetier, metiersDuSalon } from "../lib/metiers"
 
@@ -78,6 +79,9 @@ export default function SalonDetails() {
         {/* Voile sombre en bas : le nom se lit quelle que soit la teinte
             tirée, y compris sur les palettes claires de l'onglerie. */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+        <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
+          <Coeur salonId={salon.id} taille="h-11 w-11" />
+        </div>
         <div className="absolute inset-x-0 bottom-0">
           <div className="mx-auto max-w-6xl px-4 pb-6">
             {/* Tous les métiers, sans troncature : sur la fiche, la place ne

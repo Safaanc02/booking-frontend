@@ -217,6 +217,18 @@ function Section({ titre, liste, onAnnuler, enCours, annulable = false, onAvis, 
 
               {/* Le dépôt d'un avis n'est proposé qu'après un rendez-vous
                   effectivement honoré, et une seule fois. */}
+              {/* Reprendre le même rendez-vous : même salon, même prestation,
+                  même praticienne. Une cliente de salon est fidèle ; lui faire
+                  refaire les cinq étapes à chaque fois, c'est lui donner une
+                  raison de reprendre le téléphone. */}
+              {r.statut === "HONOREE" && r.salonId && r.prestationId && (
+                <Link
+                  to={`/salon/${r.salonId}/reserver?prestationId=${r.prestationId}${r.employeId ? `&employeId=${r.employeId}` : ""}`}
+                  className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
+                >
+                  Reprendre ce rendez-vous
+                </Link>
+              )}
               {r.statut === "HONOREE" && (
                 <div className="w-full">
                   {r.avisDepose

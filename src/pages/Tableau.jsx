@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { adminApi, proApi, reservationsApi, salonsApi } from "../api/bookingApi"
+import { adminApi, proApi, reservationsApi, salonsApi, publicApi } from "../api/bookingApi"
 import { useAuth } from "../auth/useAuth"
+import { abonner } from "../lib/favoris"
 import { heureLocale, instantLong, jourLong, prix, telephone } from "../lib/format"
 import { aujourdhui, minuteCasablanca, salonsOuverts, salutation } from "../lib/maroc"
 import Loader from "../components/Loader"
@@ -267,6 +268,15 @@ function HeroClient({ rdv }) {
 }
 
 function SectionClient({ aVenir, avisAttendus, historique, seul }) {
+  /* Les salons gardés, avec leur fiche : le magasin n'a que les identifiants,
+     les noms viennent de la route publique, salon par salon. Quatre au plus
+     sur le tableau de bord. */
+  const [favoris, setFavoris] = useState([])
+  useEffect(() => abonner((ids) => {
+    const liste = [...ids].slice(0, 4)
+    Promise.all(liste.map((id) => publicApi.ficheSalon(id).catch(() => null)))
+      .then((fiches) => setFavoris(fiches.filter(Boolean)))
+  }), [])
   /* Les salons déjà fréquentés, du plus récent au plus ancien, sans doublon. */
   const habitudes = useMemo(() => {
     const vus = new Map()
@@ -331,11 +341,32 @@ function SectionClient({ aVenir, avisAttendus, historique, seul }) {
         </section>
       )}
 
-      {habitudes.length > 0 && (
+      {favoris.length > 0 && (
+        <section>
+          <Titre lien="/recherche" libelleLien="Chercher ailleurs">Mes salons</Titre>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {favoris.map((s) => (
+              <li key={s.id}>
+                <Link
+                  to={`/salon/${s.id}`}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-sm ring-1 ring-stone-200 hover:ring-brand-300"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-stone-900">{s.nom}</span>
+                    <span className="block truncate text-stone-500">{[s.quartier, s.ville].filter(Boolean).join(" · ")}</span>
+                  </span>
+                  {s.ouvertMaintenant === true && <span className="shrink-0 text-xs font-semibold text-emerald-700">Ouvert</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {habitudes.filter(([id]) => !favoris.some((f) => f.id === id)).length > 0 && (
         <section>
           <Titre lien="/recherche" libelleLien="Chercher ailleurs">Réserver à nouveau</Titre>
           <div className="flex flex-wrap gap-2">
-            {habitudes.map(([id, nom]) => (
+            {habitudes.filter(([id]) => !favoris.some((f) => f.id === id)).map(([id, nom]) => (
               <Link
                 key={id}
                 to={`/salon/${id}`}
