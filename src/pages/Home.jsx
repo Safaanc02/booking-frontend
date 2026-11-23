@@ -159,7 +159,7 @@ function TitreSection({ titre, complement, lien, libelleLien }) {
  * Et il respire : la graisse de Fraunces suit le curseur, de très peu. Ce
  * n'est pas un effet, c'est le papier du carnet qui prend la lumière.
  */
-function TitreVivant() {
+function TitreVivant({ jour = null }) {
   const [h, setH] = useState(heureCasablanca)
   const ref = useRef(null)
   useEffect(() => {
@@ -184,9 +184,14 @@ function TitreVivant() {
     return () => window.removeEventListener("mousemove", bouge)
   }, [])
 
+  /* Le jour que montre le ruban prime : si le ruban a glissé sur demain ou
+     sur jeudi, le titre ne promet pas « cet après-midi ». */
   const moment = h < 12 ? "matin" : h < 18 ? "apres" : "soir"
-  const ligne1 = { matin: "Ce matin, à l'heure", apres: "Cet après-midi, à l'heure", soir: "Demain, à l'heure" }[moment]
-  const ligne2 = { matin: "qui vous arrange.", apres: "qui vous arrange.", soir: "que vous voulez." }[moment]
+  const autreJour = jour && jour !== "Aujourd'hui"
+  const ligne1 = autreJour ? `${jour}, à l'heure`
+    : { matin: "Ce matin, à l'heure", apres: "Cet après-midi, à l'heure", soir: "Demain, à l'heure" }[moment]
+  const ligne2 = autreJour ? "que vous voulez."
+    : { matin: "qui vous arrange.", apres: "qui vous arrange.", soir: "que vous voulez." }[moment]
   return (
     <>
       <h1 ref={ref} className="respire mt-6 text-4xl font-bold leading-[1.08] tracking-tight text-stone-900 sm:text-5xl">
@@ -227,7 +232,7 @@ const isoPlus = (n) => {
  *
  * Les chiffres sont vrais : ils viennent des créneaux réels, à la minute.
  */
-function RubanDuJour({ villes }) {
+function RubanDuJour({ villes, onJour }) {
   const [ville, setVille] = useState("")
   const [h, setH] = useState(heureCasablanca)
   const [m, setM] = useState(minuteCasablanca)
@@ -263,6 +268,8 @@ function RubanDuJour({ villes }) {
       .catch(() => { if (vivant) setEtat({ statut: "erreur", data: null }) })
     return () => { vivant = false }
   }, [ville, date]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { onJour?.(libelleJour) }, [libelleJour]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (etat.statut !== "ok" || !rubanRef.current) return
@@ -434,6 +441,8 @@ function Vitrine() {
     .slice(0, 3)
 
   const parVille = (ville) => reseau.salons.filter((s) => s.ville === ville).length
+  /* Le jour que montre le ruban, pour que le titre parle du même. */
+  const [jourRuban, setJourRuban] = useState(null)
 
   return (
     <div>
@@ -447,7 +456,7 @@ function Vitrine() {
 
             {/* Le titre suit l'heure du Maroc : le matin promet la journée, le
                 soir promet demain. Et il respire sous le curseur. */}
-            <TitreVivant />
+            <TitreVivant jour={jourRuban} />
             <div className="mt-8 max-w-2xl">
               <SearchBar variante="hero" villes={reseau.villes} />
             </div>
@@ -489,7 +498,7 @@ function Vitrine() {
           </div>
 
           <div className="lg:pl-4">
-            <RubanDuJour villes={reseau.villes} />
+            <RubanDuJour villes={reseau.villes} onJour={setJourRuban} />
           </div>
         </div>
       </section>
