@@ -450,8 +450,11 @@ function Vitrine() {
       {/* Bandeau d'entrée                                                 */}
       {/* ---------------------------------------------------------------- */}
       <section className="relative overflow-hidden bg-gradient-to-b from-brand-50 via-brand-50/40 to-ivoire">
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-12 pt-14 lg:grid-cols-[1.15fr_minmax(0,0.85fr)] lg:gap-14 lg:pb-14 lg:pt-20">
-          <div>
+        {/* grid-cols-[minmax(0,1fr)] à toutes les tailles : sans borne, la piste
+            implicite prend la largeur intrinsèque du ruban — tous ses créneaux
+            bout à bout, 2 432 px — et le bandeau coupe tout à 390 px. */}
+        <div className="relative mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-4 pb-12 pt-14 lg:grid-cols-[1.15fr_minmax(0,0.85fr)] lg:gap-14 lg:pb-14 lg:pt-20">
+          <div className="min-w-0">
             <Accroche />
 
             {/* Le titre suit l'heure du Maroc : le matin promet la journée, le
@@ -497,7 +500,7 @@ function Vitrine() {
             )}
           </div>
 
-          <div className="lg:pl-4">
+          <div className="min-w-0 lg:pl-4">
             <RubanDuJour villes={reseau.villes} onJour={setJourRuban} />
           </div>
         </div>
