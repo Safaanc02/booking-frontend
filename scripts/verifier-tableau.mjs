@@ -119,9 +119,9 @@ for (const compte of COMPTES) {
     return {
       chemin: location.pathname,
       texte,
-      /* La vitrine se reconnaît à son accroche. Si elle est là, la bascule
-         n'a pas eu lieu. */
-      vitrine: texte.includes('Votre prochain rendez-vous'),
+      /* La vitrine se reconnaît à son accroche — « Choisissez l'heure d'abord »,
+         celle du ruban de la journée. Si elle est là, la bascule n'a pas eu lieu. */
+      vitrine: texte.includes("Choisissez l'heure d'abord"),
       encart: document.querySelector('section.bg-sable')?.innerText ?? '',
       liens: [...document.querySelectorAll('main a')].map((a) => a.getAttribute('href')),
       manquant: /n'(a|ont) pas pu être chargée/.test(texte),
@@ -150,7 +150,7 @@ const anonyme = await navigateur.newPage()
 await anonyme.setViewport({ width: 1280, height: 1000 })
 await anonyme.goto(SITE, { waitUntil: 'networkidle0' })
 const texteAnonyme = await anonyme.evaluate(() => document.body.innerText)
-dire(texteAnonyme.includes('Votre prochain rendez-vous'), 'la vitrine est bien servie')
+dire(texteAnonyme.includes("Choisissez l'heure d'abord"), 'la vitrine est bien servie')
 dire(!/^(Bonjour|Bonsoir)/m.test(texteAnonyme), 'et ne salue personne')
 
 await navigateur.close()
