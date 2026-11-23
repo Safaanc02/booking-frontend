@@ -288,3 +288,23 @@ h1, h2, h3 {
   padding-right: 40px;
 }
 .onglets-defilants::-webkit-scrollbar { display: none; }
+
+/*
+ * Le titre respire.
+ *
+ * La graisse de Fraunces suit la position du curseur sur quelques dizaines
+ * d'unités — imperceptible de loin, vivant de près, comme une encre qui
+ * sèche. Pilotée par --souffle (0 à 1) posée par l'accueil ; sans curseur,
+ * ni au téléphone, ni pour qui a demandé que rien ne bouge, elle reste
+ * posée.
+ */
+.respire {
+  font-variation-settings: "opsz" 144, "wght" calc(560 + var(--souffle, 0.5) * 180);
+  transition: font-variation-settings 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce), (pointer: coarse) { .respire { font-variation-settings: "opsz" 144, "wght" 650; transition: none; } }
+
+/* Le ruban de la journée : une rangée d'heures qu'on fait glisser du pouce. */
+.ruban-jour { scrollbar-width: none; scroll-snap-type: x proximity; }
+.ruban-jour::-webkit-scrollbar { display: none; }
+.ruban-jour > * { scroll-snap-align: center; }

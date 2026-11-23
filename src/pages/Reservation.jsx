@@ -293,6 +293,8 @@ export default function Reservation() {
             )}
             <div className="mt-5">
               <CalendarSlots
+                dateInitiale={params.get("date")}
+                heureInitiale={params.get("heure")}
                 salonId={salonId}
                 prestationId={prestation.id}
                 employeId={employeId}

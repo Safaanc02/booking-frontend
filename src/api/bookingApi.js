@@ -90,6 +90,9 @@ export const publicApi = {
       .then((r) => r.data),
 
   villes: () => client.get("/api/public/villes").then((r) => r.data),
+  /** La journée d'une ville, heure par heure : qui peut vous recevoir. L'heure d'abord, le salon ensuite. */
+  creneauxDuJour: ({ ville, date } = {}) =>
+    client.get("/api/public/creneaux-du-jour", { params: { ville: ville || undefined, date: date || undefined } }).then((r) => r.data),
   /** Les horaires d'ouverture d'un salon, tels qu'il les a saisis. */
   horaires: (salonId) => client.get(`/api/public/salons/${salonId}/horaires`).then((r) => r.data),
 

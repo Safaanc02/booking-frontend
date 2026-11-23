@@ -13,7 +13,13 @@ const FENETRE = 14
  * proposer une bande de dates dont la moitié est vide fait cliquer le visiteur
  * dans le vide, et c'est là qu'il abandonne.
  */
-export default function CalendarSlots({ salonId, prestationId, employeId, onChoisir }) {
+/**
+ * `dateInitiale` et `heureInitiale` : la cliente arrive de l'accueil où elle
+ * a choisi une heure avant le salon. On ouvre la bonne journée, et si le
+ * créneau qu'elle a vu est encore libre, il est pris d'office — c'est tout
+ * le sens du geste. S'il a été pris entre-temps, elle voit les voisins.
+ */
+export default function CalendarSlots({ salonId, prestationId, employeId, onChoisir, dateInitiale = null, heureInitiale = null }) {
   const [jours, setJours] = useState({ statut: "chargement", data: [], erreur: null })
   const [jour, setJour] = useState(null)
   const [creneaux, setCreneaux] = useState({ statut: "inactif", data: [], erreur: null })
@@ -39,7 +45,8 @@ export default function CalendarSlots({ salonId, prestationId, employeId, onChoi
       .then((data) => {
         if (annule) return
         setJours({ statut: "ok", data, erreur: null })
-        if (data.length > 0) setJour(data[0])
+        if (dateInitiale && data.includes(dateInitiale)) setJour(dateInitiale)
+        else if (data.length > 0) setJour(data[0])
       })
       .catch((erreur) => !annule && setJours({ statut: "erreur", data: [], erreur }))
 
@@ -53,7 +60,17 @@ export default function CalendarSlots({ salonId, prestationId, employeId, onChoi
 
     publicApi
       .disponibilites(salonId, { prestationId, date: jour, employeId })
-      .then((d) => !annule && setCreneaux({ statut: "ok", data: d.creneaux ?? [], erreur: null }))
+      .then((d) => {
+        if (annule) return
+        const liste = d.creneaux ?? []
+        setCreneaux({ statut: "ok", data: liste, erreur: null })
+        /* L'heure venue de l'accueil, prise d'office si elle est encore là —
+           une seule fois, pour la journée demandée. */
+        if (heureInitiale && jour === dateInitiale) {
+          const voulu = liste.find((c) => String(c.heure).slice(0, 5) === heureInitiale)
+          if (voulu) onChoisir(voulu)
+        }
+      })
       .catch((erreur) => !annule && setCreneaux({ statut: "erreur", data: [], erreur }))
 
     return () => { annule = true }
