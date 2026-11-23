@@ -15,6 +15,313 @@ import { sessionConnue } from "../auth/sessionConnue"
 import Tableau from "./Tableau"
 import Loader from "../components/Loader"
 
+function Accroche() {
+  const [maintenant, setMaintenant] = useState(() => ({
+    heure: minuteCasablanca(), h: heureCasablanca(),
+  }))
+
+  useEffect(() => {
+    // La minute suffit : rafraîchir plus souvent ne change rien à l'écran.
+    const id = setInterval(
+      () => setMaintenant({ heure: minuteCasablanca(), h: heureCasablanca() }), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const ferme = maintenant.h < OUVERTURE[0] || maintenant.h >= OUVERTURE[1]
+
+  return (
+    <p className="inline-flex items-center gap-2.5 rounded-full bg-white/70 py-1.5 pl-2.5 pr-4 text-[13px] text-stone-600 ring-1 ring-stone-200/80 backdrop-blur">
+      <Horloge className="h-4 w-4 shrink-0 text-brand-600" />
+      <span>
+        <span className="font-semibold tabular-nums text-stone-900">{maintenant.heure}</span>
+        {" à Casablanca — "}
+        {ferme ? "les salons sont fermés, la réservation non." : "réservez sans décrocher."}
+      </span>
+    </p>
+  )
+}
+
+/** Titre de section, ponctué du khatem plutôt que d'un filet. */
+function TitreSection({ titre, complement, lien, libelleLien }) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight text-stone-900">
+          {titre}
+        </h2>
+        {complement && <p className="mt-1 text-sm text-stone-500">{complement}</p>}
+      </div>
+      {lien && (
+        <Link to={lien} className="text-sm font-medium text-brand-700 underline-offset-4 hover:underline">
+          {libelleLien}
+        </Link>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Aperçu de disponibilités réelles, sur un salon réel.
+ *
+ * Une illustration inventée dirait la même chose sans rien prouver. Celle-ci
+ * interroge le moteur de disponibilité du produit, sur le salon le mieux noté :
+ * les heures affichées sont libres, et le bouton mène au tunnel. Le prix de la
+ * chaîne d'appels est assumé — c'est le seul endroit du site où la promesse est
+ * vérifiable d'un coup d'œil.
+ *
+ * Elle se construisait en trois appels enchaînés — la fiche du salon, les
+ * jours ouverts, puis les créneaux du premier jour — et rendait `null` tant
+ * que les trois n'avaient pas abouti. La colonne n'existait donc pas pendant
+ * trois allers-retours, puis surgissait. À travers un tunnel, où chaque appel
+ * quitte le réseau local, l'attente se voit.
+ *
+ * Elle disparaissait en outre sans un mot dans cinq cas : pas de salon en
+ * vedette, salon sans catalogue, aucun jour ouvert sur quinze, jour retenu
+ * sans créneau, appel en échec. Chacun rendait exactement la même page qu'un
+ * site où cette carte n'existerait pas — impossible de distinguer une panne
+ * d'un agenda plein, jusqu'à demander deux fois où elle était passée.
+ *
+ * Trois règles depuis :
+ *
+ *   1. la place est réservée dès le premier affichage, par un squelette à sa
+ *      forme — rien ne surgit, rien ne paraît manquer ;
+ *   2. dès qu'un salon est en vedette, la carte reste, avec ce qu'on sait de
+ *      lui : son nom, son quartier, sa note, son tarif d'entrée ;
+ *   3. l'absence de créneaux se dit, et se distingue d'un serveur muet — un
+ *      agenda plein est une information, une panne en est une autre.
+ */
+/*
+ * Le titre qui vit la journée.
+ *
+ * « Votre prochain rendez-vous, sans un seul appel » restait vrai à toute
+ * heure, et c'était sa faiblesse : une phrase vraie à toute heure n'en dit
+ * aucune. Le matin, le site parle de la journée qui commence ; l'après-midi,
+ * de l'après-midi ; le soir, de demain. Il suit l'heure de Casablanca, pas
+ * celle du visiteur.
+ *
+ * Et il respire : la graisse de Fraunces suit le curseur, de très peu. Ce
+ * n'est pas un effet, c'est le papier du carnet qui prend la lumière.
+ */
+function TitreVivant() {
+  const [h, setH] = useState(heureCasablanca)
+  const ref = useRef(null)
+  useEffect(() => {
+    const id = setInterval(() => setH(heureCasablanca()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !window.matchMedia("(pointer: fine)").matches) return undefined
+    let attendu = false
+    const bouge = (e) => {
+      if (attendu) return
+      attendu = true
+      requestAnimationFrame(() => {
+        attendu = false
+        const r = el.getBoundingClientRect()
+        const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))
+        el.style.setProperty("--souffle", x.toFixed(2))
+      })
+    }
+    window.addEventListener("mousemove", bouge, { passive: true })
+    return () => window.removeEventListener("mousemove", bouge)
+  }, [])
+
+  const moment = h < 12 ? "matin" : h < 18 ? "apres" : "soir"
+  const ligne1 = { matin: "Ce matin, à l'heure", apres: "Cet après-midi, à l'heure", soir: "Demain, à l'heure" }[moment]
+  const ligne2 = { matin: "qui vous arrange.", apres: "qui vous arrange.", soir: "que vous voulez." }[moment]
+  return (
+    <>
+      <h1 ref={ref} className="respire mt-6 text-4xl font-bold leading-[1.08] tracking-tight text-stone-900 sm:text-5xl">
+        {ligne1}
+        <span className="block text-brand-700">{ligne2}</span>
+      </h1>
+      <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-stone-600">
+        Choisissez l'heure d'abord. Le ruban dit qui peut vous recevoir à cet instant —
+        coiffure, barbier, onglerie, hammam — et vous réservez en un geste. Sans appel, et
+        vous pouvez changer d'avis jusqu'à la veille.
+      </p>
+    </>
+  )
+}
+
+const isoPlus = (n) => {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
+/*
+ * Le ruban de la journée.
+ *
+ * C'est le renversement de l'accueil. Tous les sites demandent « quel
+ * salon ? » puis « quelle heure ? » ; une cliente se demande d'abord « j'ai
+ * une heure à 16:30, qui me prend ? ». Le ruban répond : une rangée d'heures,
+ * chacune portant le nombre de salons libres à cet instant. L'heure qu'il
+ * est bat ; les heures passées sont barrées. On touche une heure, la carte
+ * montre qui peut vous recevoir, et « Réserver à 16:30 » mène au tunnel avec
+ * l'heure déjà prise.
+ *
+ * Quel jour : aujourd'hui, sauf après la dernière heure d'ouverture — un
+ * ruban entièrement barré est un écran fermé, pas une invitation. Et si le
+ * jour n'a aucun créneau (fermeture, férié), le ruban glisse sur le premier
+ * des quatre jours suivants qui en a, et le dit. Au-delà, le vide est montré
+ * tel quel : c'est alors une vraie information.
+ *
+ * Les chiffres sont vrais : ils viennent des créneaux réels, à la minute.
+ */
+function RubanDuJour({ villes }) {
+  const [ville, setVille] = useState("")
+  const [h, setH] = useState(heureCasablanca)
+  const [m, setM] = useState(minuteCasablanca)
+  const [decalage, setDecalage] = useState(0)
+  const [etat, setEtat] = useState({ statut: "chargement", data: null })
+  const [heure, setHeure] = useState(null)
+  const [salons, setSalons] = useState({ statut: "inactif", data: [] })
+  const rubanRef = useRef(null)
+
+  const soir = h >= OUVERTURE[1] - 1
+  const date = useMemo(() => isoPlus((soir ? 1 : 0) + decalage), [soir, decalage])
+  const estAujourdhui = date === aujourdhui()
+  const libelleJour = estAujourdhui ? "Aujourd'hui"
+    : date === isoPlus(1) ? "Demain"
+    : new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" })
+        .format(new Date(`${date}T12:00:00`)).replace(/^./, (c) => c.toUpperCase())
+
+  useEffect(() => {
+    const id = setInterval(() => { setH(heureCasablanca()); setM(minuteCasablanca()) }, 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    let vivant = true
+    setEtat({ statut: "chargement", data: null })
+    setHeure(null); setSalons({ statut: "inactif", data: [] })
+    publicApi.creneauxDuJour({ ville, date })
+      .then((data) => {
+        if (!vivant) return
+        if ((data.heures ?? []).length === 0 && decalage < 4) { setDecalage((n) => n + 1); return }
+        setEtat({ statut: "ok", data })
+      })
+      .catch(() => { if (vivant) setEtat({ statut: "erreur", data: null }) })
+    return () => { vivant = false }
+  }, [ville, date]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (etat.statut !== "ok" || !rubanRef.current) return
+    const courant = rubanRef.current.querySelector('[data-courant="true"]')
+    if (courant) courant.scrollIntoView({ inline: "center", block: "nearest", behavior: "auto" })
+  }, [etat.statut])
+
+  const choisir = (heureChoisie, ids) => {
+    setHeure(heureChoisie)
+    setSalons({ statut: "chargement", data: [] })
+    Promise.all(ids.slice(0, 6).map((id) => publicApi.ficheSalon(id).catch(() => null)))
+      .then((fiches) => setSalons({ statut: "ok", data: fiches.filter(Boolean) }))
+  }
+
+  const heures = etat.data?.heures ?? []
+  const minutesMaintenant = h * 60 + Number(String(m).slice(3, 5) || 0)
+  const enMinutes = (hh) => Number(hh.slice(0, 2)) * 60 + Number(hh.slice(3, 5))
+  const estPassee = (hh) => estAujourdhui && enMinutes(hh) < minutesMaintenant
+  const total = heures.reduce((n, x) => n + (estPassee(x.heure.slice(0, 5)) ? 0 : x.salons.length), 0)
+
+  return (
+    <div className="rounded-3xl bg-white/80 p-5 shadow-carte ring-1 ring-stone-200/70 backdrop-blur sm:p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="text-sm font-semibold uppercase tracking-wider text-brand-700">
+          {libelleJour}{ville ? ` à ${ville}` : ""}
+        </p>
+        {etat.statut === "ok" && (
+          <p className="text-sm text-stone-500">
+            <span className="font-semibold tabular-nums text-stone-900">{total}</span> créneau{total > 1 ? "x" : ""} libre{total > 1 ? "s" : ""}{estAujourdhui ? " d'ici ce soir" : ""}
+          </p>
+        )}
+      </div>
+
+      {villes?.length > 1 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {["", ...villes].map((v) => (
+            <button key={v || "toutes"} type="button" onClick={() => { setDecalage(0); setVille(v) }} aria-pressed={ville === v}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${ville === v ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"}`}>
+              {v || "Toutes les villes"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="relative mt-4">
+        <div ref={rubanRef} className="ruban-jour -mx-1 flex gap-2 overflow-x-auto px-1 py-2">
+          {etat.statut === "chargement" && Array.from({ length: 8 }, (_, i) => (
+            <div key={i} className="h-16 w-[72px] shrink-0 animate-pulse rounded-2xl bg-stone-100" />
+          ))}
+          {etat.statut === "erreur" && <p className="text-sm text-stone-500">Les créneaux n'ont pas pu être chargés.</p>}
+          {etat.statut === "ok" && heures.length === 0 && (
+            <p className="text-sm text-stone-500">Aucun créneau dans les prochains jours{ville ? ` à ${ville}` : ""}. Essayez une autre ville.</p>
+          )}
+          {etat.statut === "ok" && heures.map((x) => {
+            const hh = x.heure.slice(0, 5)
+            const passee = estPassee(hh)
+            const courante = estAujourdhui && !passee && enMinutes(hh) - minutesMaintenant < 30
+            const actif = heure === hh
+            const n = x.salons.length
+            return (
+              <button
+                key={hh}
+                type="button"
+                data-courant={courante ? "true" : undefined}
+                disabled={passee}
+                onClick={() => choisir(hh, x.salons)}
+                aria-pressed={actif}
+                className={`relative flex h-16 w-[72px] shrink-0 flex-col items-center justify-center rounded-2xl text-sm transition ${
+                  passee ? "text-stone-300 line-through" :
+                  actif ? "bg-brand-600 text-white shadow-carte-levee" :
+                  "bg-stone-50 text-stone-800 hover:-translate-y-0.5 hover:bg-brand-50 hover:text-brand-800"
+                }`}
+              >
+                {courante && !actif && <span aria-hidden className="pouls absolute -top-1 right-2 h-2 w-2 rounded-full bg-brand-500" />}
+                <span className="heure font-semibold">{hh}</span>
+                <span className={`mt-0.5 text-[11px] ${actif ? "text-white/85" : passee ? "" : "text-stone-500"}`}>
+                  {passee ? "passé" : `${n} salon${n > 1 ? "s" : ""}`}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white/90 to-transparent" />
+      </div>
+
+      {heure && (
+        <div className="mt-4 border-t border-stone-100 pt-4">
+          <p className="text-sm text-stone-600">
+            Libres à <span className="heure font-semibold text-stone-900">{heure}</span>{estAujourdhui ? "" : ` ${libelleJour.toLowerCase()}`} —
+            {salons.statut === "chargement" ? " un instant…" : ` ${salons.data.length} salon${salons.data.length > 1 ? "s" : ""}`}
+          </p>
+          <ul className="mt-3 grid gap-2">
+            {salons.statut === "ok" && salons.data.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-3 rounded-xl bg-stone-50 px-3.5 py-2.5">
+                <Link to={`/salon/${s.id}`} className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-stone-900">{s.nom}</span>
+                  <span className="block truncate text-xs text-stone-500">{[s.quartier, s.ville].filter(Boolean).join(" · ")}</span>
+                </Link>
+                <Link
+                  to={`/salon/${s.id}/reserver?date=${date}&heure=${heure}`}
+                  className="shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
+                >
+                  Réserver à {heure}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {!heure && etat.statut === "ok" && heures.length > 0 && (
+        <p className="mt-3 text-xs text-stone-400">Touchez une heure : la page montre qui peut vous recevoir à cet instant.</p>
+      )}
+    </div>
+  )
+}
+
 export default function Accueil() {
   const { ready, authenticated } = useAuth()
   if (ready) return authenticated ? <Tableau /> : <Vitrine />
